@@ -10,15 +10,12 @@ import (
 	"strconv"
 )
 
-const name = "lambda"
-const serverUrl = "punter.inf.ed.ac.uk"
+const (
+	name      = "lambda"
+	serverUrl = "punter.inf.ed.ac.uk"
+)
 
-var flagPort int
-
-func init() {
-	const defaultPort = -1
-	flag.IntVar(&flagPort, "port", defaultPort, "port for online mode, negative value mean offline mode")
-}
+var flagPort = flag.Int("port", -1, "port for online mode, negative value means offline mode")
 
 type Me struct {
 	Me string `json:"me"`
@@ -29,7 +26,10 @@ type You struct {
 }
 
 func sendMessage(w *bufio.Writer, message interface{}) {
-	bs, _ := json.Marshal(message)
+	bs, err := json.Marshal(message)
+	if err != nil {
+		panic(err)
+	}
 	ss := string(bs)
 
 	io.WriteString(w, strconv.Itoa(len(ss))+":"+ss)
@@ -74,18 +74,18 @@ func handshake(r *bufio.Reader, w *bufio.Writer) {
 }
 
 func main() {
+	log.SetFlags(0)
 	flag.Parse()
 
-	if flagPort < 0 {
+	if *flagPort < 0 {
 		log.Println("Running in offline mode")
 	} else {
 		log.Println("Running in online mode")
 
-		conn, err := net.Dial("tcp", serverUrl+":"+strconv.Itoa(flagPort))
+		conn, err := net.Dial("tcp", serverUrl+":"+strconv.Itoa(*flagPort))
 		if err != nil {
 			log.Fatal("Can't dial connection:", err)
 		}
-
 		defer conn.Close()
 
 		reader := bufio.NewReader(conn)
