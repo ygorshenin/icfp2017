@@ -11,6 +11,10 @@ import (
 	"strconv"
 )
 
+type Player struct {
+	game.BaselinePlayer
+}
+
 const (
 	name = "MIPT Lambda"
 )
@@ -24,8 +28,8 @@ type You struct {
 }
 
 type Ready struct {
-	Ready int          `json:"ready"`
-	State *game.Player `json:"state"`
+	Ready int     `json:"ready"`
+	State *Player `json:"state"`
 }
 
 type ClaimMove struct {
@@ -39,9 +43,9 @@ type PassMove struct {
 }
 
 type Move struct {
-	Claim *ClaimMove   `json:"claim,omitempty"`
-	Pass  *PassMove    `json:"pass,omitempty"`
-	State *game.Player `json:"state"`
+	Claim *ClaimMove `json:"claim,omitempty"`
+	Pass  *PassMove  `json:"pass,omitempty"`
+	State *Player    `json:"state"`
 }
 
 type Moves struct {
@@ -56,7 +60,7 @@ func toGameMove(m *Move) game.Move {
 	return game.MakeClaimMove(claim.Punter, claim.Source, claim.Target)
 }
 
-func fromGameMove(m *game.Move, p *game.Player) (r Move) {
+func fromGameMove(m *game.Move, p *Player) (r Move) {
 	switch m.Type {
 	case game.Claim:
 		r.Claim = &ClaimMove{Punter: m.Punter, Source: m.Source, Target: m.Target}
@@ -93,9 +97,9 @@ type Step struct {
 	Punters *int        `json:"punters"`
 	Map     *common.Map `json:"map"`
 
-	Moves *Moves       `json:"move"`
-	Stop  *Stop        `json:"stop"`
-	State *game.Player `json:"state"`
+	Moves *Moves  `json:"move"`
+	Stop  *Stop   `json:"stop"`
+	State *Player `json:"state"`
 }
 
 func sendMessage(w *bufio.Writer, message interface{}) {
@@ -185,7 +189,7 @@ func interact(r *bufio.Reader, w *bufio.Writer) {
 	if step.Map != nil {
 		gm := common.ToGameMap(step.Map)
 
-		var p game.Player
+		var p Player
 		p.Setup(*step.Punter, *step.Punters, gm)
 		log.Println("Punter id:", *step.Punter)
 		log.Println("Number of punters:", *step.Punters)
