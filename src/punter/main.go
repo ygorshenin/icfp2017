@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"common"
 	"encoding/json"
 	"game"
 	"io"
@@ -11,13 +10,13 @@ import (
 	"strconv"
 )
 
-type Player struct {
-	game.BaselinePlayer
-}
-
 const (
 	name = "MIPT Lambda"
 )
+
+type Player struct {
+	game.BaselinePlayer
+}
 
 type Me struct {
 	Me string `json:"me"`
@@ -93,9 +92,9 @@ type Stop struct {
 }
 
 type Step struct {
-	Punter  *int        `json:"punter"`
-	Punters *int        `json:"punters"`
-	Map     *common.Map `json:"map"`
+	Punter  *int      `json:"punter"`
+	Punters *int      `json:"punters"`
+	Map     *game.Map `json:"map"`
 
 	Moves *Moves  `json:"move"`
 	Stop  *Stop   `json:"stop"`
@@ -188,12 +187,10 @@ func interact(r *bufio.Reader, w *bufio.Writer) {
 	var step Step
 	recvMessage(r, &step)
 	if step.Map != nil {
-		gm := common.ToGameMap(step.Map)
-
-		p.Setup(*step.Punter, *step.Punters, gm)
+		p.Setup(*step.Punter, *step.Punters, *step.Map)
 		log.Println("Punter id:", *step.Punter)
 		log.Println("Number of punters:", *step.Punters)
-		log.Println("Game map:", gm)
+		log.Println("Game map:", *step.Map)
 
 		sendMessage(w, Ready{Ready: p.Punter, State: &p})
 

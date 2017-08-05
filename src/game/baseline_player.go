@@ -69,9 +69,9 @@ func (p *BaselinePlayer) Setup(punter, punters int, m Map) {
 	p.NumSites = 0
 	p.SiteToIndex = make(map[int]int)
 	for _, s := range m.Sites {
-		_, ok := p.SiteToIndex[s]
+		_, ok := p.SiteToIndex[s.Id]
 		if !ok {
-			p.SiteToIndex[s] = p.NumSites
+			p.SiteToIndex[s.Id] = p.NumSites
 			p.NumSites++
 		}
 	}
