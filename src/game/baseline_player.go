@@ -1,31 +1,18 @@
 package game
 
 type BaselinePlayer struct {
+	Graph
+
 	Punter  int `json:"punter"`
 	Punters int `json:"punters"`
 	Map     Map `json:"map"`
 
-	Distance [][]int `json:"distance"` // distance[i][j] = shortest distance from mine i to site j
-
-	AllEdges []Edge  `json:"allEdges"`
-	Edges    [][]int `json:"edges"`
-
-	NumSites    int         `json:"numSites"`
 	SiteToIndex map[int]int `json:"siteToIndex"` // maps sites to the range [0..NumSites)
 	IndexToSite []int       `json:"indexToSite"` // ...and back
-
-	Mines []int `json:"mines"` // indexes of mines
 
 	// Non-json fields are recalculated on every move.
 	reachableFromMine [][]bool // reachableFromMine[i] is the reachability array from Mine i
 	score             int64    // current score
-}
-
-type Edge struct {
-	Id    int `json:"id"`
-	Src   int `json:"src"`
-	Dst   int `json:"dst"`
-	Owner int `json:"owner"`
 }
 
 func (p *BaselinePlayer) makeClaimMove(source, target int) Move {
@@ -34,31 +21,6 @@ func (p *BaselinePlayer) makeClaimMove(source, target int) Move {
 
 func (p *BaselinePlayer) makePassMove() Move {
 	return MakePassMove(p.Punter)
-}
-
-func calcShortestPath(s int, allEdges []Edge, edges [][]int) []int {
-	n := len(edges)
-	d := make([]int, n)
-	for i := range d {
-		d[i] = n + 1
-	}
-	d[s] = 0
-	q := make([]int, n)
-	qt, qh := 0, 1
-	q[0] = s
-	for qt < qh {
-		v := q[qt]
-		qt++
-		for _, eId := range edges[v] {
-			u := allEdges[eId].Dst
-			if d[u] > 1+d[v] {
-				d[u] = 1 + d[v]
-				q[qh] = u
-				qh++
-			}
-		}
-	}
-	return d
 }
 
 func (p *BaselinePlayer) Setup(punter, punters int, m Map) {
@@ -98,10 +60,7 @@ func (p *BaselinePlayer) Setup(punter, punters int, m Map) {
 		p.Edges[b] = append(p.Edges[b], 2*i+1)
 	}
 
-	p.Distance = make([][]int, len(m.Mines))
-	for i := range p.Distance {
-		p.Distance[i] = calcShortestPath(p.Mines[i], p.AllEdges, p.Edges)
-	}
+	p.InitShortestPaths()
 }
 
 func (p *BaselinePlayer) PrepareForMove(moves []Move) {
@@ -155,7 +114,7 @@ func (p *BaselinePlayer) CalcReachabilityFromMines() {
 	p.reachableFromMine = make([][]bool, len(p.Mines))
 	for i, s := range p.Mines {
 		p.reachableFromMine[i] = make([]bool, p.NumSites)
-		p.dfsMyEdges(s, p.reachableFromMine[i])
+		p.Graph.Dfs(s, p.Punter, p.reachableFromMine[i])
 	}
 }
 
@@ -205,18 +164,4 @@ func FindEdgeVerySimple(p *BaselinePlayer) (int, int, bool) {
 	}
 
 	return 0, 0, false
-}
-
-func (p *BaselinePlayer) dfsMyEdges(v int, was []bool) {
-	was[v] = true
-	for _, eId := range p.Edges[v] {
-		e := &p.AllEdges[eId]
-		if e.Owner != p.Punter {
-			continue
-		}
-		u := e.Dst
-		if !was[u] {
-			p.dfsMyEdges(u, was)
-		}
-	}
 }
