@@ -9,6 +9,10 @@ import (
 	"log"
 )
 
+type Player struct {
+	game.BaselinePlayer
+}
+
 type edge struct {
 	from  int
 	to    int
@@ -165,7 +169,7 @@ func main() {
 	numPunters := *flagPunters
 
 	m := loadMap(*flagMap)
-	punters := make([]game.Player, numPunters)
+	punters := make([]Player, numPunters)
 	for i := range punters {
 		punters[i].Setup(i, *flagPunters, m)
 	}
