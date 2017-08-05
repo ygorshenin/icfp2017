@@ -87,9 +87,9 @@ func (g *graph) bfs(root int, sssp map[int]int) {
 	}
 }
 
-func (g *graph) calcMineScore(u, player int, visited map[int]bool, sssp map[int]int) (score int) {
+func (g *graph) calcMineScore(u, player int, visited map[int]bool, sssp map[int]int) (score int64) {
 	visited[u] = true
-	score = sssp[u] * sssp[u]
+	score = int64(sssp[u]) * int64(sssp[u])
 
 	out, ok := g.adj[u]
 	if !ok {
@@ -113,7 +113,7 @@ func (g *graph) calcMineScore(u, player int, visited map[int]bool, sssp map[int]
 	return
 }
 
-func (g *graph) calcFullScore(player int) (score int) {
+func (g *graph) calcFullScore(player int) (score int64) {
 	for i, mine := range g.mines {
 		visited := make(map[int]bool)
 		score += g.calcMineScore(mine, player, visited, g.sssp[i])

@@ -15,6 +15,10 @@ type BaselinePlayer struct {
 	IndexToSite []int       `json:"indexToSite"` // ...and back
 
 	Mines []int `json:"mines"` // indexes of mines
+
+	// Non-json fields are recalculated on every move.
+	reachableFromMine [][]bool // reachableFromMine[i] is the reachability array from Mine i
+	score             int64    // current score
 }
 
 type Edge struct {
@@ -100,8 +104,14 @@ func (p *BaselinePlayer) Setup(punter, punters int, m Map) {
 	}
 }
 
-func (p *BaselinePlayer) MakeMove(moves []Move) Move {
+func (p *BaselinePlayer) PrepareForMove(moves []Move) {
 	p.ApplyMoves(moves)
+	p.CalcReachabilityFromMines()
+	p.CalcScore()
+}
+
+func (p *BaselinePlayer) MakeMove(moves []Move) Move {
+	p.PrepareForMove(moves)
 
 	// Returns vertices (NOT sites), i.e. ints from the range [0..NumSites).
 	// true on success, false on timeout (should not happen).
@@ -141,46 +151,51 @@ func (p *BaselinePlayer) ApplyMoves(moves []Move) {
 	}
 }
 
-func FindEdgeVerySimple(p *BaselinePlayer) (int, int, bool) {
-	reachable := make([]bool, p.NumSites)
+func (p *BaselinePlayer) CalcReachabilityFromMines() {
+	p.reachableFromMine = make([][]bool, len(p.Mines))
+	for i, s := range p.Mines {
+		p.reachableFromMine[i] = make([]bool, p.NumSites)
+		p.dfsMyEdges(s, p.reachableFromMine[i])
+	}
+}
 
-	for _, v := range p.Mines {
-		if !reachable[v] {
-			dfsVerySimple(p, v, reachable)
+func (p *BaselinePlayer) CalcScore() {
+	p.score = 0
+	for i := range p.Mines {
+		for j := 0; j < p.NumSites; j++ {
+			if p.reachableFromMine[i][j] {
+				d := int64(p.Distance[i][j])
+				p.score += d * d
+			}
 		}
 	}
+}
 
-	bestU, bestV, bestScore := -1, -1, 0
+// Returns the edge that results in the best increase in score.
+func FindEdgeVerySimple(p *BaselinePlayer) (int, int, bool) {
+	bestU, bestV, bestInc := -1, -1, int64(0)
+
 	for _, e := range p.AllEdges {
 		if e.Owner >= 0 {
 			continue
 		}
-		if !reachable[e.Src] && !reachable[e.Dst] {
-			continue
-		}
-		if reachable[e.Src] && reachable[e.Dst] {
-			if bestU < 0 {
-				bestU, bestV = e.Src, e.Dst
+
+		var curInc int64
+		for i := range p.Mines {
+			rS := p.reachableFromMine[i][e.Src]
+			rD := p.reachableFromMine[i][e.Dst]
+			if rS == rD {
+				continue
 			}
-			continue
-		}
-
-		cur := 0
-
-		upd := func(v int) {
-			if !reachable[v] {
-				for i := range p.Mines {
-					d := p.Distance[i][v]
-					cur += d * d
-				}
+			d := int64(p.Distance[i][e.Src])
+			if rS {
+				d = int64(p.Distance[i][e.Dst])
 			}
+			curInc += d * d
 		}
 
-		upd(e.Src)
-		upd(e.Dst)
-
-		if bestScore < cur {
-			bestScore = cur
+		if bestInc < curInc {
+			bestInc = curInc
 			bestU, bestV = e.Src, e.Dst
 		}
 	}
@@ -192,15 +207,16 @@ func FindEdgeVerySimple(p *BaselinePlayer) (int, int, bool) {
 	return 0, 0, false
 }
 
-func dfsVerySimple(p *BaselinePlayer, v int, was []bool) {
+func (p *BaselinePlayer) dfsMyEdges(v int, was []bool) {
 	was[v] = true
 	for _, eId := range p.Edges[v] {
-		if p.AllEdges[eId].Owner != p.Punter {
+		e := &p.AllEdges[eId]
+		if e.Owner != p.Punter {
 			continue
 		}
-		u := p.AllEdges[eId].Dst
+		u := e.Dst
 		if !was[u] {
-			dfsVerySimple(p, u, was)
+			p.dfsMyEdges(u, was)
 		}
 	}
 }
