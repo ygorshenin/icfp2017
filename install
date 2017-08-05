@@ -1,0 +1,7 @@
+#!/bin/bash
+
+ROOT=$(dirname "0")
+cd "$ROOT"
+
+export GOPATH=$(pwd)
+go build punter
