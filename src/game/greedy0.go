@@ -5,9 +5,7 @@ type Greedy0Player struct {
 }
 
 func (p *Greedy0Player) MakeMove(moves []Move) Move {
-	var bp *BaselinePlayer
-	bp = &p.BaselinePlayer
-	bp.PrepareForMove(moves)
+	p.BaselinePlayer.PrepareForMove(moves)
 
 	// Returns vertices (NOT sites), i.e. ints from the range [0..NumSites).
 	// true on success, false on timeout (should not happen).
