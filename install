@@ -4,4 +4,7 @@ ROOT=$(dirname "0")
 cd "$ROOT"
 
 export GOPATH=$(pwd)
+export PATH=$PATH:"$GOPATH/bin"
+
 go build punter
+go build playground

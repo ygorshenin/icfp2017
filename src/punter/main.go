@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"common"
 	"encoding/json"
 	"game"
 	"io"
@@ -20,25 +21,6 @@ type Me struct {
 
 type You struct {
 	You string `json:"you"`
-}
-
-type Site struct {
-	Id int `json:"id"`
-}
-
-// The Map structure from server is inconvinient, this is a wrapper.
-type Map struct {
-	Sites  []Site       `json:"sites"`
-	Rivers []game.River `json:"rivers"`
-	Mines  []int        `json:"mines"`
-}
-
-func toGameMap(m *Map) game.Map {
-	sites := make([]int, len(m.Sites), len(m.Sites))
-	for i, site := range m.Sites {
-		sites[i] = site.Id
-	}
-	return game.Map{Sites: sites, Rivers: m.Rivers, Mines: m.Mines}
 }
 
 type Ready struct {
@@ -107,9 +89,9 @@ type Stop struct {
 }
 
 type Step struct {
-	Punter  *int `json:"punter"`
-	Punters *int `json:"punters"`
-	Map     *Map `json:"map"`
+	Punter  *int        `json:"punter"`
+	Punters *int        `json:"punters"`
+	Map     *common.Map `json:"map"`
 
 	Moves *Moves       `json:"move"`
 	Stop  *Stop        `json:"stop"`
@@ -201,7 +183,7 @@ func interact(r *bufio.Reader, w *bufio.Writer) {
 	var step Step
 	recvMessage(r, &step)
 	if step.Map != nil {
-		gm := toGameMap(step.Map)
+		gm := common.ToGameMap(step.Map)
 
 		var p game.Player
 		p.Setup(*step.Punter, *step.Punters, gm)
