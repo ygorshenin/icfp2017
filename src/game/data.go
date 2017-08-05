@@ -40,9 +40,9 @@ func (mt MoveType) String() string {
 func (m Move) String() string {
 	switch m.Type {
 	case Claim:
-		return fmt.Sprintf("Punter=%v, River=(%v,%v)", m.Punter, m.Source, m.Target)
+		return fmt.Sprintf("Punter=%v, Claim River=(%v,%v)", m.Punter, m.Source, m.Target)
 	case Pass:
-		return fmt.Sprintf("%v", m.Type)
+		return fmt.Sprintf("Punter=%v, Pass", m.Punter)
 	}
 	return "Bad Move"
 }
