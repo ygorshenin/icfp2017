@@ -169,8 +169,8 @@ func getRank(punter int, scores []Score) int {
 	return rank
 }
 
-func handshake(r *bufio.Reader, w *bufio.Writer) {
-	me := Me{Me: name}
+func handshake(r *bufio.Reader, w *bufio.Writer, n string) {
+	me := Me{Me: name + ": " + n}
 	sendMessage(w, me)
 
 	var you You
@@ -182,14 +182,14 @@ func handshake(r *bufio.Reader, w *bufio.Writer) {
 }
 
 func interact(r *bufio.Reader, w *bufio.Writer) {
-	handshake(r, w)
+	var p Player
+	handshake(r, w, p.Name())
 
 	var step Step
 	recvMessage(r, &step)
 	if step.Map != nil {
 		gm := common.ToGameMap(step.Map)
 
-		var p Player
 		p.Setup(*step.Punter, *step.Punters, gm)
 		log.Println("Punter id:", *step.Punter)
 		log.Println("Number of punters:", *step.Punters)
