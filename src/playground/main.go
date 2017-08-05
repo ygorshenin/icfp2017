@@ -7,11 +7,9 @@ import (
 	"game"
 	"io/ioutil"
 	"log"
+	"strconv"
+	"strings"
 )
-
-type Player struct {
-	game.BaselinePlayer
-}
 
 type edge struct {
 	from  int
@@ -147,7 +145,7 @@ func makeGraph(m *game.Map) (g graph) {
 const MaxPasses = 10
 
 var flagMap = flag.String("map", "", "Path to a JSON-encoded map")
-var flagPunters = flag.Int("punters", 2, "Number of bots")
+var flagBots = flag.String("bots", "baseline,baseline", "Comma-separated list of bots")
 
 func loadMap(path string) game.Map {
 	data, err := ioutil.ReadFile(path)
@@ -163,15 +161,43 @@ func loadMap(path string) game.Map {
 	return common.ToGameMap(&m)
 }
 
+func parseBots(s string) (bots []string) {
+	parts := strings.Split(s, ",")
+	for _, part := range parts {
+		reps := strings.Split(part, "*")
+
+		if len(reps) > 2 {
+			log.Fatal("Invalid bots spec: " + s)
+		}
+
+		if len(reps) == 1 {
+			bots = append(bots, reps[0])
+			continue
+		}
+
+		n, err := strconv.Atoi(reps[1])
+		if err != nil {
+			log.Fatal("Invalid bots spec: " + s)
+		}
+
+		for i := 0; i < n; i++ {
+			bots = append(bots, reps[0])
+		}
+	}
+	return
+}
+
 func main() {
 	flag.Parse()
 
-	numPunters := *flagPunters
+	bots := parseBots(*flagBots)
+	numPunters := len(bots)
 
 	m := loadMap(*flagMap)
-	punters := make([]Player, numPunters)
+	punters := make([]game.Player, numPunters)
 	for i := range punters {
-		punters[i].Setup(i, *flagPunters, m)
+		punters[i] = game.MakePlayer(bots[i])
+		punters[i].Setup(i, numPunters, m)
 	}
 
 	g := makeGraph(&m)
@@ -216,6 +242,6 @@ func main() {
 
 	for punter := 0; punter < numPunters; punter++ {
 		score := g.calcFullScore(punter)
-		log.Printf("Punter %v, score: %v", punter, score)
+		log.Printf("Punter %v %v, score: %v", punter, punters[punter].Name(), score)
 	}
 }
