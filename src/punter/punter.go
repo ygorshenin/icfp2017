@@ -151,20 +151,36 @@ func recvMessage(r *bufio.Reader, message interface{}) {
 	}
 }
 
-func getTournamentScore(punter int, scores []Score) int {
+func formatScores(punter int, scores []Score) string {
+	s := "["
+	for _, sc := range scores {
+		if len(s) > 1 {
+			s += ", "
+		}
+		if sc.Punter == punter {
+			s += "[" + strconv.Itoa(sc.Score) + "]"
+		} else {
+			s += strconv.Itoa(sc.Score)
+		}
+	}
+	s += "]"
+	return s
+}
+
+func getRank(punter int, scores []Score) int {
 	var myScore int
 	for _, sc := range scores {
 		if sc.Punter == punter {
 			myScore = sc.Score
 		}
 	}
-	rank := 0
+	rank := 1
 	for _, sc := range scores {
 		if sc.Punter != punter && sc.Score > myScore {
 			rank++
 		}
 	}
-	return len(scores) - rank
+	return rank
 }
 
 func handshake(r *bufio.Reader, w *bufio.Writer) {
@@ -201,14 +217,14 @@ func interact(r *bufio.Reader, w *bufio.Writer) {
 	if step.Moves != nil {
 		p := step.State
 		move := p.MakeMove(toGameMoves(step.Moves.Moves))
-		log.Printf("%T Making move: %v", move, move)
+		log.Printf("Making move: %v", move)
 		sendMessage(w, fromGameMove(&move, p))
 		return
 	}
 
 	if step.Stop != nil {
-		log.Println("Final scores:", step.Stop.Scores)
-		log.Printf("Tournament score: %d/%d\n", getTournamentScore(step.State.Punter, step.Stop.Scores), len(step.Stop.Scores))
+		log.Println("Final scores:", formatScores(step.State.Punter, step.Stop.Scores))
+		log.Printf("Rank: %d/%d\n", getRank(step.State.Punter, step.Stop.Scores), len(step.Stop.Scores))
 		return
 	}
 

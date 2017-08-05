@@ -103,24 +103,15 @@ func (st *Player) Setup(punter, punters int, m Map) {
 func (p *Player) MakeMove(moves []Move) Move {
 	p.ApplyMoves(moves)
 
-	u, v, ok := FindBestEdge(p)
+	// Returns vertices (NOT sites), i.e. ints from the range [0..NumSites).
+	// true on success, false on timeout (should not happen).
+	u, v, ok := FindEdgeVerySimple(p)
 	if !ok {
 		return p.makePassMove()
 	}
 	u = p.IndexToSite[u]
 	v = p.IndexToSite[v]
 	return p.makeClaimMove(u, v)
-}
-
-// Returns vertices (NOT sites), i.e. ints from the range [0..NumSites).
-// true on success, false on timeout (should not happen).
-func FindBestEdge(st *Player) (int, int, bool) {
-	for _, e := range st.AllEdges {
-		if e.Owner < 0 {
-			return e.Src, e.Dst, true
-		}
-	}
-	return 0, 0, false
 }
 
 func (st *Player) ApplyMoves(moves []Move) {
@@ -142,6 +133,70 @@ func (st *Player) ApplyMoves(moves []Move) {
 				e.Owner = o
 				st.AllEdges[e.Id^1].Owner = o
 			}
+		}
+	}
+}
+
+func FindEdgeVerySimple(st *Player) (int, int, bool) {
+	reachable := make([]bool, st.NumSites)
+
+	for _, v := range st.Mines {
+		if !reachable[v] {
+			dfsVerySimple(st, v, reachable)
+		}
+	}
+
+	bestU, bestV, bestScore := -1, -1, 0
+	for _, e := range st.AllEdges {
+		if e.Owner >= 0 {
+			continue
+		}
+		if !reachable[e.Src] && !reachable[e.Dst] {
+			continue
+		}
+		if reachable[e.Src] && reachable[e.Dst] {
+			if bestU < 0 {
+				bestU, bestV = e.Src, e.Dst
+			}
+			continue
+		}
+
+		cur := 0
+
+		upd := func(v int) {
+			if !reachable[v] {
+				for i := range st.Mines {
+					d := st.Distance[i][v]
+					cur += d * d
+				}
+			}
+		}
+
+		upd(e.Src)
+		upd(e.Dst)
+
+		if bestScore < cur {
+			bestScore = cur
+			bestU, bestV = e.Src, e.Dst
+		}
+	}
+
+	if bestU >= 0 {
+		return bestU, bestV, true
+	}
+
+	return 0, 0, false
+}
+
+func dfsVerySimple(st *Player, v int, was []bool) {
+	was[v] = true
+	for _, eId := range st.Edges[v] {
+		if st.AllEdges[eId].Owner != st.Punter {
+			continue
+		}
+		u := st.AllEdges[eId].Dst
+		if !was[u] {
+			dfsVerySimple(st, u, was)
 		}
 	}
 }
