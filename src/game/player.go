@@ -7,13 +7,13 @@ type Player interface {
 }
 
 func MakePlayer(name string) Player {
-	if name == "zombie" {
+	switch name {
+	case "zombie":
 		return new(ZombiePlayer)
-	}
-
-	if name == "baseline" {
+	case "baseline":
 		return new(BaselinePlayer)
+	case "greedy0":
+		return new(Greedy0Player)
 	}
-
 	panic("Unknown name: " + name)
 }
