@@ -1,9 +1,9 @@
 package game
 
 type Player struct {
-	Punter  int
-	Punters int
-	Map     Map
+	Punter  int `json:"punter"`
+	Punters int `json:"punters"`
+	Map     Map `json:"map"`
 }
 
 func (p *Player) makeClaimMove(source, target int) Move {
