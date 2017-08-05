@@ -42,7 +42,7 @@ func (m Move) String() string {
 	case Claim:
 		return fmt.Sprintf("Punter=%v, River=(%v,%v)", m.Punter, m.Source, m.Target)
 	case Pass:
-		return fmt.Sprintf("%t", m.Type)
+		return fmt.Sprintf("%v", m.Type)
 	}
 	return "Bad Move"
 }
