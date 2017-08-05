@@ -134,7 +134,7 @@ func (st *Player) ApplyMoves(moves []Move) {
 		o := m.Punter
 
 		for _, eId := range st.Edges[a] {
-			e := st.AllEdges[eId]
+			e := &st.AllEdges[eId]
 			if e.Dst == b {
 				if e.Owner >= 0 && e.Owner != o {
 					panic("a previously claimed edge was claimed in a non-pass move")
