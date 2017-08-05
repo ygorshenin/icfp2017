@@ -114,6 +114,10 @@ func (p *BaselinePlayer) MakeMove(moves []Move) Move {
 	return p.makeClaimMove(u, v)
 }
 
+func (p *BaselinePlayer) Name() string {
+	return "baseline"
+}
+
 func (p *BaselinePlayer) ApplyMoves(moves []Move) {
 	for _, m := range moves {
 		if m.Type == Pass {
