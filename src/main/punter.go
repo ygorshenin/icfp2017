@@ -3,20 +3,16 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"flag"
 	"game"
 	"io"
 	"log"
-	"net"
+	"os"
 	"strconv"
 )
 
 const (
-	name      = "lambda"
-	serverUrl = "punter.inf.ed.ac.uk"
+	name = "lambda"
 )
-
-var flagPort = flag.Int("port", -1, "port for online mode, negative value means offline mode")
 
 type Me struct {
 	Me string `json:"me"`
@@ -45,14 +41,9 @@ func toGameMap(m *Map) game.Map {
 	return game.Map{Sites: sites, Rivers: m.Rivers, Mines: m.Mines}
 }
 
-type Setup struct {
-	Punter  int `json:"punter"`
-	Punters int `json:"punters"`
-	Map     Map `json:"map"`
-}
-
 type Ready struct {
-	Ready int `json:"ready"`
+	Ready int          `json:"ready"`
+	State *game.Player `json:"state"`
 }
 
 type ClaimMove struct {
@@ -66,8 +57,9 @@ type PassMove struct {
 }
 
 type Move struct {
-	Claim *ClaimMove `json:"claim,omitempty"`
-	Pass  *PassMove  `json:"pass,omitempty"`
+	Claim *ClaimMove   `json:"claim,omitempty"`
+	Pass  *PassMove    `json:"pass,omitempty"`
+	State *game.Player `json:"state"`
 }
 
 type Moves struct {
@@ -82,7 +74,7 @@ func toGameMove(m *Move) game.Move {
 	return game.MakeClaimMove(claim.Punter, claim.Source, claim.Target)
 }
 
-func fromGameMove(m *game.Move) (r Move) {
+func fromGameMove(m *game.Move, p *game.Player) (r Move) {
 	switch m.Type {
 	case game.Claim:
 		r.Claim = &ClaimMove{Punter: m.Punter, Source: m.Source, Target: m.Target}
@@ -91,6 +83,7 @@ func fromGameMove(m *game.Move) (r Move) {
 	default:
 		log.Fatal("Unknown move type:", m.Type)
 	}
+	r.State = p
 	return
 }
 
@@ -114,9 +107,13 @@ type Stop struct {
 }
 
 type Step struct {
-	Moves   *Moves `json:"move"`
-	Stop    *Stop  `json:"stop"`
-	Timeout *int   `json:"timeout"`
+	Punter  *int `json:"punter"`
+	Punters *int `json:"punters"`
+	Map     *Map `json:"map"`
+
+	Moves *Moves       `json:"move"`
+	Stop  *Stop        `json:"stop"`
+	State *game.Player `json:"state"`
 }
 
 func sendMessage(w *bufio.Writer, message interface{}) {
@@ -162,71 +159,49 @@ func handshake(r *bufio.Reader, w *bufio.Writer) {
 	recvMessage(r, &you)
 
 	if me.Me != you.You {
-		log.Fatal("Expected:", me.Me, " received:", you.You)
+		log.Fatal("Handshake failed: expected:", me.Me, " received:", you.You)
 	}
-
-	log.Println("Successful handshake")
 }
 
-func setup(r *bufio.Reader, w *bufio.Writer, p *game.Player) {
-	var setup Setup
-	recvMessage(r, &setup)
+func interact(r *bufio.Reader, w *bufio.Writer) {
+	handshake(r, w)
 
-	gm := toGameMap(&setup.Map)
+	var step Step
+	recvMessage(r, &step)
+	if step.Map != nil {
+		gm := toGameMap(step.Map)
 
-	log.Println("Punter id:", setup.Punter)
-	log.Println("Number of punters:", setup.Punters)
-	log.Println("Game map:", gm)
+		var p game.Player
+		p.Setup(*step.Punter, *step.Punters, gm)
+		log.Println("Punter id:", *step.Punter)
+		log.Println("Number of punters:", *step.Punters)
+		log.Println("Game map:", gm)
 
-	p.Setup(setup.Punter, setup.Punters, gm)
+		sendMessage(w, Ready{Ready: p.Punter, State: &p})
 
-	sendMessage(w, Ready{Ready: setup.Punter})
-}
-
-func interact(r *bufio.Reader, w *bufio.Writer, p *game.Player) {
-	for {
-		var step Step
-		recvMessage(r, &step)
-		if step.Moves != nil {
-			move := p.MakeMove(toGameMoves(step.Moves.Moves))
-			log.Println("Making move:", move)
-			sendMessage(w, fromGameMove(&move))
-			continue
-		}
-		if step.Stop != nil {
-			log.Println("Final scores:", step.Stop.Scores)
-			break
-		}
-		if step.Timeout != nil {
-			log.Println("Timeout:", *step.Timeout)
-			continue
-		}
-		log.Fatal("Unknown state")
+		return
 	}
+
+	if step.Moves != nil {
+		p := step.State
+		move := p.MakeMove(toGameMoves(step.Moves.Moves))
+		sendMessage(w, fromGameMove(&move, p))
+		return
+	}
+
+	if step.Stop != nil {
+		log.Println("Final scores:", step.Stop.Scores)
+		return
+	}
+
+	log.Fatal("Unknown state")
 }
 
 func main() {
 	log.SetFlags(0)
-	flag.Parse()
 
-	var player game.Player
+	reader := bufio.NewReader(os.Stdin)
+	writer := bufio.NewWriter(os.Stdout)
 
-	if *flagPort < 0 {
-		log.Println("Running in offline mode")
-	} else {
-		log.Println("Running in online mode")
-
-		conn, err := net.Dial("tcp", serverUrl+":"+strconv.Itoa(*flagPort))
-		if err != nil {
-			log.Fatal("Can't dial connection:", err)
-		}
-		defer conn.Close()
-
-		reader := bufio.NewReader(conn)
-		writer := bufio.NewWriter(conn)
-
-		handshake(reader, writer)
-		setup(reader, writer, &player)
-		interact(reader, writer, &player)
-	}
+	interact(reader, writer)
 }
