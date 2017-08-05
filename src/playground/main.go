@@ -1,12 +1,14 @@
 package main
 
 import (
-	"common"
+	"bufio"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"game"
 	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -124,7 +126,10 @@ func (g *graph) calcFullScore(player int) (score int64) {
 func makeGraph(m *game.Map) (g graph) {
 	numEdges := len(m.Rivers)
 
-	g.vertices = m.Sites
+	g.vertices = make([]int, len(m.Sites))
+	for i, s := range m.Sites {
+		g.vertices[i] = s.Id
+	}
 	g.mines = m.Mines
 	g.edges = make([]edge, numEdges*2)
 	g.adj = make(map[int][]int)
@@ -146,6 +151,8 @@ const MaxPasses = 10
 
 var flagMap = flag.String("map", "", "Path to a JSON-encoded map")
 var flagBots = flag.String("bots", "baseline,baseline", "Comma-separated list of bots")
+var flagVisFile = flag.String("visfile", "", "filename to write visualizer information to")
+var visWriter *bufio.Writer
 
 func loadMap(path string) game.Map {
 	data, err := ioutil.ReadFile(path)
@@ -153,12 +160,12 @@ func loadMap(path string) game.Map {
 		log.Fatal("Can't read file:", path)
 	}
 
-	var m common.Map
+	var m game.Map
 	err = json.Unmarshal([]byte(data), &m)
 	if err != nil {
-		log.Fatal("Can't parse map:", data)
+		log.Fatal("Can't parse map:", string(data))
 	}
-	return common.ToGameMap(&m)
+	return m
 }
 
 func parseBots(s string) (bots []string) {
@@ -194,6 +201,21 @@ func main() {
 	numPunters := len(bots)
 
 	m := loadMap(*flagMap)
+
+	if *flagVisFile != "" {
+		visFile, err := os.Create(*flagVisFile)
+		if err != nil {
+			log.Fatal("Can't open vis file:", err)
+		}
+		visWriter = bufio.NewWriter(visFile)
+
+		jsonMap, err := json.Marshal(&m)
+		if err != nil {
+			log.Fatal("Can't show map:", err)
+		}
+		fmt.Fprintln(visWriter, string(jsonMap))
+	}
+
 	punters := make([]game.Player, numPunters)
 	for i := range punters {
 		punters[i] = game.MakePlayer(bots[i])
@@ -220,7 +242,11 @@ func main() {
 
 			move := punters[punter].MakeMove(moves)
 
-			log.Println("Move: ", move.String())
+			log.Println("Move: ", move)
+
+			if *flagVisFile != "" && move.Type == game.Claim {
+				fmt.Fprintln(visWriter, move.Punter, move.Source, move.Target)
+			}
 
 			switch move.Type {
 			case game.Pass:
@@ -243,5 +269,9 @@ func main() {
 	for punter := 0; punter < numPunters; punter++ {
 		score := g.calcFullScore(punter)
 		log.Printf("Punter %v %v, score: %v", punter, punters[punter].Name(), score)
+	}
+
+	if *flagVisFile != "" {
+		visWriter.Flush()
 	}
 }
