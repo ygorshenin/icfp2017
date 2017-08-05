@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	name = "lambda"
+	name = "MIPT Lambda"
 )
 
 type Me struct {
@@ -151,6 +151,22 @@ func recvMessage(r *bufio.Reader, message interface{}) {
 	}
 }
 
+func getTournamentScore(punter int, scores []Score) int {
+	var myScore int
+	for _, sc := range scores {
+		if sc.Punter == punter {
+			myScore = sc.Score
+		}
+	}
+	rank := 0
+	for _, sc := range scores {
+		if sc.Punter != punter && sc.Score > myScore {
+			rank++
+		}
+	}
+	return len(scores) - rank
+}
+
 func handshake(r *bufio.Reader, w *bufio.Writer) {
 	me := Me{Me: name}
 	sendMessage(w, me)
@@ -185,12 +201,14 @@ func interact(r *bufio.Reader, w *bufio.Writer) {
 	if step.Moves != nil {
 		p := step.State
 		move := p.MakeMove(toGameMoves(step.Moves.Moves))
+		log.Printf("%T Making move: %v", move, move)
 		sendMessage(w, fromGameMove(&move, p))
 		return
 	}
 
 	if step.Stop != nil {
 		log.Println("Final scores:", step.Stop.Scores)
+		log.Printf("Tournament score: %d/%d\n", getTournamentScore(step.State.Punter, step.Stop.Scores), len(step.Stop.Scores))
 		return
 	}
 
