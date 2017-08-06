@@ -13,6 +13,7 @@ type BaselinePlayer struct {
 	// Non-json fields are recalculated on every move.
 	reachableFromMine [][]bool // reachableFromMine[i] is the reachability array from Mine i
 	score             int64    // current score
+	scores            []int64  // current scores for all punters
 }
 
 func (p *BaselinePlayer) MakeClaimMove(source, target int) Move {
@@ -47,7 +48,7 @@ func (p *BaselinePlayer) Setup(punter, punters int, m Map, s Settings) {
 func (p *BaselinePlayer) PrepareForMove(moves []Move) {
 	p.ApplyMoves(moves)
 	p.CalcReachabilityFromMines()
-	p.CalcScore()
+	p.CalcScores()
 }
 
 func (p *BaselinePlayer) MakeMove(moves []Move) Move {
@@ -113,16 +114,26 @@ func (p *BaselinePlayer) CalcReachabilityFromMines() {
 	}
 }
 
-func (p *BaselinePlayer) CalcScore() {
-	p.score = 0
-	for i := range p.Mines {
-		for j := 0; j < p.NumSites; j++ {
-			if p.reachableFromMine[i][j] {
-				d := int64(p.Distance[i][j])
-				p.score += d * d
+func (p *BaselinePlayer) CalcScores() {
+	p.scores = make([]int64, p.Punters)
+	for pId := 0; pId < p.Punters; pId++ {
+		for i := range p.Mines {
+			var was []bool
+			if pId == p.Punter {
+				was = p.reachableFromMine[i]
+			} else {
+				was = make([]bool, p.NumSites)
+				p.Dfs(p.Mines[i], pId, was)
+			}
+			for j := 0; j < p.NumSites; j++ {
+				if was[j] {
+					d := int64(p.Distance[i][j])
+					p.scores[pId] += d * d
+				}
 			}
 		}
 	}
+	p.score = p.scores[p.Punter]
 }
 
 // Returns the edge that results in the best increase in score.
