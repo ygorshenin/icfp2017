@@ -369,9 +369,21 @@ func main() {
 		}
 	}
 
+	scores := make([]int64, numPunters)
+	var maxScore int64
 	for punter := 0; punter < numPunters; punter++ {
-		score := g.calcFullScore(punter, futures[punter], settings)
-		log.Printf("Punter %v %v, score:\t%10v", punter, punters[punter].Name(), score)
+		scores[punter] = g.calcFullScore(punter, futures[punter], settings)
+		if scores[punter] > maxScore {
+			maxScore = scores[punter]
+		}
+	}
+
+	for punter, score := range scores {
+		if score == maxScore {
+			log.Printf("* Punter %v %v, score: %v", punter, punters[punter].Name(), score)
+		} else {
+			log.Printf("  Punter %v %v, score: %v", punter, punters[punter].Name(), score)
+		}
 	}
 
 	if *flagVisFile != "" {
