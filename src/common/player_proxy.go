@@ -16,7 +16,7 @@ func (pp *PlayerProxy) toGameMove(move *Move) game.Move {
 	}
 	if move.Splurge != nil {
 		route := make([]int, len(move.Splurge.Route))
-		for i, v := range len(move.Splurge.Route) {
+		for i, v := range move.Splurge.Route {
 			route[i] = pp.Index.Forward[v]
 		}
 		return game.MakeSplurgeMove(move.Splurge.Punter, route)
