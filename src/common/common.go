@@ -1,6 +1,8 @@
 package common
 
-import "game"
+import (
+	"game"
+)
 
 type CompressedIndex struct {
 	Forward  map[int]int `json:"forward"`
@@ -10,7 +12,7 @@ type CompressedIndex struct {
 func (index *CompressedIndex) Setup(values []int) {
 	n := 0
 	index.Forward = make(map[int]int)
-	for v := range values {
+	for _, v := range values {
 		_, ok := index.Forward[v]
 		if !ok {
 			index.Forward[v] = n

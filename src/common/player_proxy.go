@@ -15,7 +15,7 @@ func (pp *PlayerProxy) toGameMove(move *Move) game.Move {
 		return game.MakePassMove(move.Pass.Punter)
 	}
 	claim := move.Claim
-	return game.MakeClaimMove(claim.Punter, claim.Source, claim.Target)
+	return game.MakeClaimMove(claim.Punter, pp.Index.Forward[claim.Source], pp.Index.Forward[claim.Target])
 }
 
 func (pp *PlayerProxy) toGameMoves(moves []Move) (gmoves []game.Move) {

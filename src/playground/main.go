@@ -59,7 +59,7 @@ func (g *graph) claimEdge(owner, from, to int) {
 		}
 	}
 	if !found {
-		panic("Can't claim unknown edge")
+		panic("Can't claim unknown edge: " + strconv.Itoa(from) + " " + strconv.Itoa(to))
 	}
 }
 
