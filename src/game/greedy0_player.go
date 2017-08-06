@@ -11,12 +11,10 @@ func (p *Greedy0Player) MakeMove(moves []Move) Move {
 	// true on success, false on timeout (should not happen).
 	u, v, ok := FindEdgeGreedy0(p)
 	if !ok {
-		return p.makePassMove()
+		return p.MakePassMove()
 	}
-	u = p.IndexToSite[u]
-	v = p.IndexToSite[v]
 
-	return p.makeClaimMove(u, v)
+	return p.MakeClaimMove(u, v)
 }
 
 func FindEdgeGreedy0(p *Greedy0Player) (int, int, bool) {

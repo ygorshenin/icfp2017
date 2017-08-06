@@ -2,10 +2,10 @@ package main
 
 import (
 	"bufio"
+	"common"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"game"
 	"io/ioutil"
 	"log"
 	"os"
@@ -123,12 +123,13 @@ func (g *graph) calcFullScore(player int) (score int64) {
 	return
 }
 
-func makeGraph(m *game.Map) (g graph) {
+func makeGraph(m *common.Map) (g graph) {
+	numVertices := len(m.Sites)
 	numEdges := len(m.Rivers)
 
-	g.vertices = make([]int, len(m.Sites))
-	for i, s := range m.Sites {
-		g.vertices[i] = s.Id
+	g.vertices = make([]int, numVertices)
+	for i, site := range m.Sites {
+		g.vertices[i] = site.Id
 	}
 	g.mines = m.Mines
 	g.edges = make([]edge, numEdges*2)
@@ -154,18 +155,17 @@ var flagBots = flag.String("bots", "baseline,baseline", "Comma-separated list of
 var flagVisFile = flag.String("visfile", "", "filename to write visualizer information to")
 var visWriter *bufio.Writer
 
-func loadMap(path string) game.Map {
+func loadMap(path string) (m common.Map) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.Fatal("Can't read file:", path)
 	}
 
-	var m game.Map
 	err = json.Unmarshal([]byte(data), &m)
 	if err != nil {
 		log.Fatal("Can't parse map:", string(data))
 	}
-	return m
+	return
 }
 
 func parseBots(s string) (bots []string) {
@@ -216,17 +216,17 @@ func main() {
 		fmt.Fprintln(visWriter, string(jsonMap))
 	}
 
-	punters := make([]game.Player, numPunters)
+	punters := make([]common.PlayerProxy, numPunters)
 	for i := range punters {
-		punters[i] = game.MakePlayer(bots[i])
-		punters[i].Setup(i, numPunters, m)
+		punters[i] = common.MakePlayerProxy(bots[i])
+		punters[i].Setup(i, numPunters, &m)
 	}
 
 	g := makeGraph(&m)
 
-	moves := make([]game.Move, numPunters)
+	moves := make([]common.Move, numPunters)
 	for i := 0; i < numPunters; i++ {
-		moves[i] = game.MakePassMove(i)
+		moves[i].Pass = &common.PassMove{Punter: i}
 	}
 
 	zombies := make([]bool, numPunters)
@@ -242,19 +242,19 @@ func main() {
 
 			move := punters[punter].MakeMove(moves)
 
-			log.Println("Move: ", move)
+			log.Println("Move: ", move.String())
 
-			if *flagVisFile != "" && move.Type == game.Claim {
-				fmt.Fprintln(visWriter, move.Punter, move.Source, move.Target)
+			if *flagVisFile != "" && move.Claim != nil {
+				claim := move.Claim
+				fmt.Fprintln(visWriter, claim.Punter, claim.Source, claim.Target)
 			}
 
-			switch move.Type {
-			case game.Pass:
+			if move.Pass != nil {
 				numPasses[punter]++
-			case game.Claim:
+			} else if move.Claim != nil {
 				numPasses[punter] = 0
 				curRivers++
-				g.claimEdge(punter, move.Source, move.Target)
+				g.claimEdge(punter, move.Claim.Source, move.Claim.Target)
 			}
 
 			if numPasses[punter] == MaxPasses {

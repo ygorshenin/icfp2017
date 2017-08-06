@@ -2,23 +2,6 @@ package game
 
 import "fmt"
 
-type River struct {
-	Source int `json:"source"`
-	Target int `json:"target"`
-}
-
-type Site struct {
-	Id int     `json:"id"`
-	X  float64 `json:"x,omitempty"`
-	Y  float64 `json:"y,omitempty"`
-}
-
-type Map struct {
-	Sites  []Site  `json:"sites"`
-	Rivers []River `json:"rivers"`
-	Mines  []int   `json:"mines"`
-}
-
 type MoveType int
 
 const (

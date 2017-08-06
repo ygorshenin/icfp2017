@@ -13,3 +13,5 @@ func (p *ZombiePlayer) MakeMove(moves []Move) Move {
 }
 
 func (p *ZombiePlayer) Name() string { return "zombie" }
+
+func (p *ZombiePlayer) GetPunter() int { return p.Punter }
