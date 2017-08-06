@@ -24,7 +24,6 @@ type graph struct {
 	vertices []int
 	mines    []int
 	isMine   map[int]bool
-	mineId   map[int]int
 	sssp     map[int]map[int]int
 	edges    []edge
 	adj      map[int][]int
@@ -147,9 +146,9 @@ func (g *graph) dfs(u int, player int, visited map[int]bool) {
 }
 
 func (g *graph) calcFullScore(player int, futures [][2]int, s game.Settings) (score int64) {
-	for i, mine := range g.mines {
+	for _, mine := range g.mines {
 		visited := make(map[int]bool)
-		score += g.calcMineScore(mine, player, visited, g.sssp[i])
+		score += g.calcMineScore(mine, player, visited, g.sssp[mine])
 	}
 
 	if !s.FuturesMode && len(futures) > 0 {
@@ -164,7 +163,7 @@ func (g *graph) calcFullScore(player int, futures [][2]int, s game.Settings) (sc
 			}
 			visited := make(map[int]bool)
 			g.dfs(a, player, visited)
-			d := int64(g.sssp[g.mineId[a]][b])
+			d := int64(g.sssp[a][b])
 			if visited[b] {
 				score += d * d * d
 			} else {
@@ -174,6 +173,30 @@ func (g *graph) calcFullScore(player int, futures [][2]int, s game.Settings) (sc
 	}
 
 	return
+}
+
+// Computes upper bound on the score for any player, without futures
+func (g *graph) scoreUpperBound() (score int64) {
+	for _, mine := range g.mines {
+		for _, vertex := range g.vertices {
+			d := int64(g.sssp[mine][vertex])
+			score += d * d
+		}
+	}
+	return
+}
+
+func (g *graph) futureUpperBound() int64 {
+	var score int64
+	for _, mine := range g.mines {
+		for _, vertex := range g.vertices {
+			d := int64(g.sssp[mine][vertex])
+			if d > score {
+				score = d
+			}
+		}
+	}
+	return score * score * score
 }
 
 func makeGraph(m *common.Map) (g graph) {
@@ -189,10 +212,8 @@ func makeGraph(m *common.Map) (g graph) {
 	g.adj = make(map[int][]int)
 
 	g.isMine = make(map[int]bool)
-	g.mineId = make(map[int]int)
-	for i, m := range m.Mines {
+	for _, m := range m.Mines {
 		g.isMine[m] = true
-		g.mineId[m] = i
 	}
 
 	for i, river := range m.Rivers {
@@ -201,9 +222,9 @@ func makeGraph(m *common.Map) (g graph) {
 	}
 
 	g.sssp = make(map[int]map[int]int)
-	for i, mine := range g.mines {
-		g.sssp[i] = make(map[int]int)
-		g.bfs(mine, g.sssp[i])
+	for _, mine := range g.mines {
+		g.sssp[mine] = make(map[int]int)
+		g.bfs(mine, g.sssp[mine])
 	}
 	return g
 }
@@ -378,11 +399,17 @@ func main() {
 		}
 	}
 
+	sub := g.scoreUpperBound()
+	fub := g.futureUpperBound()
+	log.Printf("Score upper bound (no futures): %v", sub)
+	log.Printf("Future upper bound: %v", fub)
+
 	for punter, score := range scores {
+		fr := float64(score) * 100 / float64(sub)
 		if score == maxScore {
-			log.Printf("* Punter %v %v, score: %v", punter, punters[punter].Name(), score)
+			log.Printf("* Punter %v %v, score: %v (%.2v%%)", punter, punters[punter].Name(), score, fr)
 		} else {
-			log.Printf("  Punter %v %v, score: %v", punter, punters[punter].Name(), score)
+			log.Printf("  Punter %v %v, score: %v (%.2v%%)", punter, punters[punter].Name(), score, fr)
 		}
 	}
 
