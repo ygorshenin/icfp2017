@@ -1,16 +1,21 @@
 package game
 
 import (
+	"math"
 	"math/rand"
 )
 
-type Random0Player struct {
+type Random1Player struct {
 	BaselinePlayer
 	distanceFromOwned [][]int
 	totalScore        []int64
+
+	was   []int
+	depth []int
+	queue []int
 }
 
-func (p *Random0Player) MakeMove(moves []Move) Move {
+func (p *Random1Player) MakeMove(moves []Move) Move {
 	p.BaselinePlayer.PrepareForMove(moves)
 
 	for _, e := range p.AllEdges {
@@ -25,6 +30,10 @@ func (p *Random0Player) MakeMove(moves []Move) Move {
 		copy(was, p.reachableFromMine[i])
 		p.distanceFromOwned[i] = p.MSSP(was)
 	}
+
+	p.was = make([]int, p.NumSites)
+	p.depth = make([]int, p.NumSites)
+	p.queue = make([]int, p.NumSites)
 
 	scores := make([]int64, len(p.AllEdges))
 	var bestScore int64
@@ -56,16 +65,15 @@ func (p *Random0Player) MakeMove(moves []Move) Move {
 	return move
 }
 
-func (p *Random0Player) Name() string { return "random0" }
+func (p *Random1Player) Name() string { return "random1" }
 
-func (p *Random0Player) getEdgeScore(e Edge) (score int64) {
+func (p *Random1Player) getEdgeScore(e Edge) (score int64) {
 	if e.Owner >= 0 {
 		return
 	}
 
-	was := make([]int, p.NumSites)
-	for i := range was {
-		was[i] = -1
+	for i := range p.was {
+		p.was[i] = -1
 	}
 
 	for mine := range p.Mines {
@@ -77,10 +85,10 @@ func (p *Random0Player) getEdgeScore(e Edge) (score int64) {
 		}
 
 		if rS {
-			d := p.expectedScore(e.Dst, mine, 0, was)
+			d := int64(p.expectedScore(e.Dst, mine))
 			score += d * d
 		} else {
-			d := p.expectedScore(e.Src, mine, 0, was)
+			d := int64(p.expectedScore(e.Src, mine))
 			score += d * d
 		}
 	}
@@ -88,7 +96,7 @@ func (p *Random0Player) getEdgeScore(e Edge) (score int64) {
 	return
 }
 
-func (p *Random0Player) countBonus(u, v, mine int) (bonus int64) {
+func (p *Random1Player) countBonus(u, v, mine int) (bonus int64) {
 	for _, e := range p.Edges[u] {
 		edge := &p.AllEdges[e]
 		if edge.Owner >= 0 {
@@ -103,7 +111,7 @@ func (p *Random0Player) countBonus(u, v, mine int) (bonus int64) {
 	return bonus
 }
 
-func (p *Random0Player) calcDegreesOfFreedom(u int) (d int) {
+func (p *Random1Player) calcDegreesOfFreedom(u int) (d int) {
 	for _, e := range p.Edges[u] {
 		edge := &p.AllEdges[e]
 		if edge.Owner < 0 {
@@ -113,24 +121,41 @@ func (p *Random0Player) calcDegreesOfFreedom(u int) (d int) {
 	return
 }
 
-func (p *Random0Player) expectedScore(u, mine, depth int, was []int) (score int64) {
+func (p *Random1Player) expectedScore(u, mine int) (score float64) {
 	const depthLimit = 10
+	const discount = 0.95
 
-	was[u] = mine
-	score += int64(p.Distance[mine][u]) * int64(p.Distance[mine][u])
-	if depth == depthLimit {
-		return
-	}
-	for _, e := range p.Edges[u] {
-		edge := p.AllEdges[e]
-		if edge.Owner < 0 && was[edge.Dst] != mine {
-			score += p.expectedScore(edge.Dst, mine, depth+1, was)
+	qh, qt := 0, 0
+
+	p.was[u] = mine
+	p.queue[qt] = u
+	p.depth[u] = 0
+	qt++
+
+	for qh < qt {
+		u := p.queue[qh]
+		qh++
+
+		score += math.Pow(discount, float64(p.depth[u])) * float64(p.Distance[mine][u]) * float64(p.Distance[mine][u])
+		if p.depth[u] == depthLimit {
+			continue
+		}
+		for _, e := range p.Edges[u] {
+			edge := p.AllEdges[e]
+			if edge.Owner < 0 && p.was[edge.Dst] != mine {
+				v := edge.Dst
+				p.was[v] = mine
+				p.queue[qt] = v
+				qt++
+				p.depth[v] = p.depth[u] + 1
+			}
 		}
 	}
+
 	return
 }
 
-func (p *Random0Player) fromMine(e Edge) bool {
+func (p *Random1Player) fromMine(e Edge) bool {
 	for _, m := range p.Mines {
 		if e.Src == m {
 			return true
