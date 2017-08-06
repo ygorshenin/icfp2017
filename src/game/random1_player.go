@@ -84,13 +84,15 @@ func (p *Random1Player) getEdgeScore(e Edge) (score int64) {
 			continue
 		}
 
+		var d int64
+
 		if rS {
-			d := int64(p.expectedScore(e.Dst, mine))
-			score += d * d
+			d = int64(p.expectedScore(e.Dst, mine))
 		} else {
-			d := int64(p.expectedScore(e.Src, mine))
-			score += d * d
+			d = int64(p.expectedScore(e.Src, mine))
 		}
+
+		score += d * d
 	}
 
 	return
@@ -122,8 +124,8 @@ func (p *Random1Player) calcDegreesOfFreedom(u int) (d int) {
 }
 
 func (p *Random1Player) expectedScore(u, mine int) (score float64) {
-	const depthLimit = 10
-	const discount = 0.95
+	const depthLimit = 20
+	discount := 0.95
 
 	qh, qt := 0, 0
 
