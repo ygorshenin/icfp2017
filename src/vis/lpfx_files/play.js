@@ -13,8 +13,8 @@ function visualize(lines) {
 
     var processMoveLine = function(line) {
 	//sleepFor(100)
-	console.log(line)
-	try {
+    console.log(line)
+    try {
 	    let l = line.split(' ')
 	    let p = l[0]
 	    let s = l[1]

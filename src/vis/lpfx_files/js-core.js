@@ -183,8 +183,14 @@ function importJSON(ourJSON) {
   for (let i = 0; i < ourJSON.rivers.length; i++) {
     const id = getFreshEdgeID();
     const curEdge = ourJSON.rivers[i];
+
+    const a = curEdge["source"]
+    const b = curEdge["target"]
+    const source = Math.min(a, b)
+    const target = Math.max(a, b)
+
     const entry = {group: "edges"};
-    const data = { "id": id, "source": curEdge["source"].toString(), "target": curEdge["target"].toString()};
+    const data = { "id": id, "source": source.toString(), "target": target.toString()};
     entry["data"] = data;
     entry["selected"] = false;
     entry["classes"] = "top-center";
