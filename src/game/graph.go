@@ -15,6 +15,22 @@ type Graph struct {
 	Distance [][]int `json:"distance"` // distance[i][j] = shortest distance from mine i to site j
 }
 
+func (g *Graph) InitGraph(m Map) {
+	g.NumSites = len(m.Sites)
+	g.Mines = m.Mines
+	g.AllEdges = make([]Edge, 2*len(m.Rivers))
+	g.Edges = make([][]int, g.NumSites)
+	for i, r := range m.Rivers {
+		a := r.Source
+		b := r.Target
+
+		g.AllEdges[2*i] = Edge{Id: 2 * i, Src: a, Dst: b, Owner: -1}
+		g.AllEdges[2*i+1] = Edge{Id: 2*i + 1, Src: b, Dst: a, Owner: -1}
+		g.Edges[a] = append(g.Edges[a], 2*i)
+		g.Edges[b] = append(g.Edges[b], 2*i+1)
+	}
+}
+
 func (g *Graph) InitShortestPaths() {
 	g.Distance = make([][]int, len(g.Mines))
 	for i := range g.Distance {

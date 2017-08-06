@@ -144,7 +144,7 @@ func interact(r *bufio.Reader, w *bufio.Writer) {
 		log.Println("Game map:", *step.Map)
 		log.Println("Settings:", step.Settings)
 
-		sendMessage(w, Ready{Ready: *step.Punter, State: &pp})
+		sendMessage(w, Ready{Ready: *step.Punter, State: &pp, Futures: pp.GetFutures()})
 		return
 	}
 

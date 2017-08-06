@@ -37,7 +37,7 @@ func (m Move) String() string {
 	case Pass:
 		return fmt.Sprintf("Punter=%v, Pass", m.Punter)
 	case Splurge:
-		return fmt.Sprintf("Punter=%v, Splurge, Route=%v", m.Punter, m.Route)
+		return fmt.Sprintf("Punter=%v, Splurge Route=%v", m.Punter, m.Route)
 	}
 	return "Bad Move"
 }
