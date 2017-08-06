@@ -2,8 +2,8 @@ package main
 
 import (
 	"bufio"
+	"common"
 	"encoding/json"
-	"game"
 	"io"
 	"log"
 	"os"
@@ -14,10 +14,6 @@ const (
 	name = "MIPT Lambda"
 )
 
-type Player struct {
-	game.BaselinePlayer
-}
-
 type Me struct {
 	Me string `json:"me"`
 }
@@ -27,58 +23,8 @@ type You struct {
 }
 
 type Ready struct {
-	Ready int     `json:"ready"`
-	State *Player `json:"state"`
-}
-
-type ClaimMove struct {
-	Punter int `json:"punter"`
-	Source int `json:"source"`
-	Target int `json:"target"`
-}
-
-type PassMove struct {
-	Punter int `json:"punter"`
-}
-
-type Move struct {
-	Claim *ClaimMove `json:"claim,omitempty"`
-	Pass  *PassMove  `json:"pass,omitempty"`
-	State *Player    `json:"state"`
-}
-
-type Moves struct {
-	Moves []Move `json:"moves"`
-}
-
-func toGameMove(m *Move) game.Move {
-	if m.Pass != nil {
-		return game.MakePassMove(m.Pass.Punter)
-	}
-	claim := m.Claim
-	return game.MakeClaimMove(claim.Punter, claim.Source, claim.Target)
-}
-
-func fromGameMove(m *game.Move, p *Player) (r Move) {
-	switch m.Type {
-	case game.Claim:
-		r.Claim = &ClaimMove{Punter: m.Punter, Source: m.Source, Target: m.Target}
-	case game.Pass:
-		r.Pass = &PassMove{Punter: m.Punter}
-	default:
-		log.Fatal("Unknown move type:", m.Type)
-	}
-	r.State = p
-	return
-}
-
-func toGameMoves(moves []Move) (r []game.Move) {
-	n := len(moves)
-	r = make([]game.Move, n, n)
-	for i, m := range moves {
-		r[i] = toGameMove(&m)
-	}
-	return
+	Ready int                 `json:"ready"`
+	State *common.PlayerProxy `json:"state"`
 }
 
 type Score struct {
@@ -87,18 +33,18 @@ type Score struct {
 }
 
 type Stop struct {
-	Moves  []Move  `json:"move"`
-	Scores []Score `json:"scores"`
+	Moves  []common.Move `json:"move"`
+	Scores []Score       `json:"scores"`
 }
 
 type Step struct {
-	Punter  *int      `json:"punter"`
-	Punters *int      `json:"punters"`
-	Map     *game.Map `json:"map"`
+	Punter  *int        `json:"punter"`
+	Punters *int        `json:"punters"`
+	Map     *common.Map `json:"map"`
 
-	Moves *Moves  `json:"move"`
-	Stop  *Stop   `json:"stop"`
-	State *Player `json:"state"`
+	Moves *common.Moves       `json:"move"`
+	Stop  *Stop               `json:"stop"`
+	State *common.PlayerProxy `json:"state"`
 }
 
 func sendMessage(w *bufio.Writer, message interface{}) {
@@ -132,7 +78,7 @@ func recvMessage(r *bufio.Reader, message interface{}) {
 
 	err = json.Unmarshal(bytes, message)
 	if err != nil {
-		log.Fatal("Can't receive message:", err)
+		log.Fatal("Can't receive message:", err, " [", string(bytes), "]")
 	}
 }
 
@@ -181,33 +127,35 @@ func handshake(r *bufio.Reader, w *bufio.Writer, n string) {
 }
 
 func interact(r *bufio.Reader, w *bufio.Writer) {
-	var p Player
-	handshake(r, w, p.Name())
+	pp := common.MakePlayerProxy("baseline")
+	handshake(r, w, pp.Name())
 
 	var step Step
+	step.State = &pp
+
 	recvMessage(r, &step)
 	if step.Map != nil {
-		p.Setup(*step.Punter, *step.Punters, *step.Map)
+		pp.Setup(*step.Punter, *step.Punters, step.Map)
 		log.Println("Punter id:", *step.Punter)
 		log.Println("Number of punters:", *step.Punters)
 		log.Println("Game map:", *step.Map)
 
-		sendMessage(w, Ready{Ready: p.Punter, State: &p})
+		sendMessage(w, Ready{Ready: *step.Punter, State: &pp})
 
 		return
 	}
 
 	if step.Moves != nil {
-		p := step.State
-		move := p.MakeMove(toGameMoves(step.Moves.Moves))
-		log.Printf("Making move: %v", move)
-		sendMessage(w, fromGameMove(&move, p))
+		move := pp.MakeMove(step.Moves.Moves)
+		log.Printf("Making move: %v", move.String())
+		sendMessage(w, move)
 		return
 	}
 
 	if step.Stop != nil {
-		log.Println("Final scores:", formatScores(step.State.Punter, step.Stop.Scores))
-		log.Printf("Rank: %d/%d\n", getRank(step.State.Punter, step.Stop.Scores), len(step.Stop.Scores))
+		punter := step.State.GetPunter()
+		log.Println("Final scores:", formatScores(punter, step.Stop.Scores))
+		log.Printf("Rank: %d/%d\n", getRank(punter, step.Stop.Scores), len(step.Stop.Scores))
 		return
 	}
 

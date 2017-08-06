@@ -5,53 +5,31 @@ type BaselinePlayer struct {
 
 	Punter  int `json:"punter"`
 	Punters int `json:"punters"`
-	Map     Map `json:"map"`
-
-	SiteToIndex map[int]int `json:"siteToIndex"` // maps sites to the range [0..NumSites)
-	IndexToSite []int       `json:"indexToSite"` // ...and back
 
 	// Non-json fields are recalculated on every move.
 	reachableFromMine [][]bool // reachableFromMine[i] is the reachability array from Mine i
 	score             int64    // current score
 }
 
-func (p *BaselinePlayer) makeClaimMove(source, target int) Move {
+func (p *BaselinePlayer) MakeClaimMove(source, target int) Move {
 	return MakeClaimMove(p.Punter, source, target)
 }
 
-func (p *BaselinePlayer) makePassMove() Move {
+func (p *BaselinePlayer) MakePassMove() Move {
 	return MakePassMove(p.Punter)
 }
 
 func (p *BaselinePlayer) Setup(punter, punters int, m Map) {
 	p.Punter = punter
 	p.Punters = punters
-	p.Map = m
+	p.NumSites = len(m.Sites)
 
-	p.NumSites = 0
-	p.SiteToIndex = make(map[int]int)
-	for _, s := range m.Sites {
-		_, ok := p.SiteToIndex[s.Id]
-		if !ok {
-			p.SiteToIndex[s.Id] = p.NumSites
-			p.NumSites++
-		}
-	}
-	p.IndexToSite = make([]int, p.NumSites)
-	for k, v := range p.SiteToIndex {
-		p.IndexToSite[v] = k
-	}
-
-	p.Mines = make([]int, len(m.Mines))
-	for i, id := range m.Mines {
-		p.Mines[i] = p.SiteToIndex[id]
-	}
-
+	p.Mines = m.Mines
 	p.AllEdges = make([]Edge, 2*len(m.Rivers))
 	p.Edges = make([][]int, p.NumSites)
 	for i, r := range m.Rivers {
-		a := p.SiteToIndex[r.Source]
-		b := p.SiteToIndex[r.Target]
+		a := r.Source
+		b := r.Target
 
 		// todo(@m) use degs
 		p.AllEdges[2*i] = Edge{Id: 2 * i, Src: a, Dst: b, Owner: -1}
@@ -76,15 +54,17 @@ func (p *BaselinePlayer) MakeMove(moves []Move) Move {
 	// true on success, false on timeout (should not happen).
 	u, v, ok := FindEdgeVerySimple(p)
 	if !ok {
-		return p.makePassMove()
+		return p.MakePassMove()
 	}
-	u = p.IndexToSite[u]
-	v = p.IndexToSite[v]
-	return p.makeClaimMove(u, v)
+	return p.MakeClaimMove(u, v)
 }
 
 func (p *BaselinePlayer) Name() string {
 	return "baseline"
+}
+
+func (p *BaselinePlayer) GetPunter() int {
+	return p.Punter
 }
 
 func (p *BaselinePlayer) ApplyMoves(moves []Move) {
@@ -93,8 +73,8 @@ func (p *BaselinePlayer) ApplyMoves(moves []Move) {
 			continue
 		}
 
-		a := p.SiteToIndex[m.Source]
-		b := p.SiteToIndex[m.Target]
+		a := m.Source
+		b := m.Target
 		o := m.Punter
 
 		for _, eId := range p.Edges[a] {
