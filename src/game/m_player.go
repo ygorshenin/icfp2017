@@ -11,6 +11,9 @@ func (p *MPlayer) Setup(punter, punters int, m Map, s Settings) {
 }
 
 func (p *MPlayer) SetupFutures() {
+	if !p.Settings.FuturesMode {
+		return
+	}
 	maxDist := p.NumSites / 5
 	if maxDist > 15 {
 		maxDist = 15
