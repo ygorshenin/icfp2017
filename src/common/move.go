@@ -26,7 +26,7 @@ type SplurgeMove struct {
 }
 
 func (m *SplurgeMove) String() string {
-	return fmt.Sprintf("Punter=%v, Splurge Route=%v", m.Route)
+	return fmt.Sprintf("Punter=%v, Splurge Route=%v", m.Punter, m.Route)
 }
 
 type Move struct {

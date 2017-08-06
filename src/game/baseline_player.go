@@ -29,7 +29,7 @@ func (p *BaselinePlayer) MakeSplurgeMove(route []int) Move {
 	if !p.Settings.SplurgesMode {
 		panic("cannot splurge: splurge mode is off")
 	}
-	if len(route) > p.Passes+1 {
+	if len(route) > p.Passes+2 {
 		panic("not enough passes to splurge")
 	}
 	return MakeSplurgeMove(p.Punter, route)
@@ -38,23 +38,9 @@ func (p *BaselinePlayer) MakeSplurgeMove(route []int) Move {
 func (p *BaselinePlayer) Setup(punter, punters int, m Map, s Settings) {
 	p.Punter = punter
 	p.Punters = punters
-	p.NumSites = len(m.Sites)
 	p.Settings = s
 
-	p.Mines = m.Mines
-	p.AllEdges = make([]Edge, 2*len(m.Rivers))
-	p.Edges = make([][]int, p.NumSites)
-	for i, r := range m.Rivers {
-		a := r.Source
-		b := r.Target
-
-		// todo(@m) use degs
-		p.AllEdges[2*i] = Edge{Id: 2 * i, Src: a, Dst: b, Owner: -1}
-		p.AllEdges[2*i+1] = Edge{Id: 2*i + 1, Src: b, Dst: a, Owner: -1}
-		p.Edges[a] = append(p.Edges[a], 2*i)
-		p.Edges[b] = append(p.Edges[b], 2*i+1)
-	}
-
+	p.InitGraph(m)
 	p.InitShortestPaths()
 }
 
@@ -69,7 +55,7 @@ func (p *BaselinePlayer) MakeMove(moves []Move) Move {
 
 	// Returns vertices (NOT sites), i.e. ints from the range [0..NumSites).
 	// true on success, false on timeout (should not happen).
-	u, v, ok := FindEdgeVerySimple(p)
+	u, v, ok := p.FindEdge()
 	if !ok {
 		return p.MakePassMove()
 	}
@@ -88,24 +74,32 @@ func (p *BaselinePlayer) GetFutures() []Future {
 	return p.Futures
 }
 
+func (p *BaselinePlayer) SetEdgeOwnership(a, b, owner int) {
+	for _, eId := range p.Edges[a] {
+		e := &p.AllEdges[eId]
+		if e.Dst == b {
+			if e.Owner >= 0 && e.Owner != owner {
+				panic("a previously claimed edge was claimed in a non-pass move")
+			}
+			e.Owner = owner
+			p.AllEdges[e.Id^1].Owner = owner
+		}
+	}
+}
+
 func (p *BaselinePlayer) ApplyMoves(moves []Move) {
 	for _, m := range moves {
 		if m.Type == Pass {
 			continue
 		}
 
-		a := m.Source
-		b := m.Target
-		o := m.Punter
+		if m.Type == Claim {
+			p.SetEdgeOwnership(m.Source, m.Target, m.Punter)
+		}
 
-		for _, eId := range p.Edges[a] {
-			e := &p.AllEdges[eId]
-			if e.Dst == b {
-				if e.Owner >= 0 && e.Owner != o {
-					panic("a previously claimed edge was claimed in a non-pass move")
-				}
-				e.Owner = o
-				p.AllEdges[e.Id^1].Owner = o
+		if m.Type == Splurge {
+			for i := 0; i+1 < len(m.Route); i++ {
+				p.SetEdgeOwnership(m.Route[i], m.Route[i+1], m.Punter)
 			}
 		}
 	}
@@ -132,7 +126,7 @@ func (p *BaselinePlayer) CalcScore() {
 }
 
 // Returns the edge that results in the best increase in score.
-func FindEdgeVerySimple(p *BaselinePlayer) (int, int, bool) {
+func (p *BaselinePlayer) FindEdge() (int, int, bool) {
 	bestU, bestV, bestInc := -1, -1, int64(0)
 
 	for _, e := range p.AllEdges {
