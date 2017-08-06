@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"game"
 	"io/ioutil"
 	"log"
 	"os"
@@ -22,6 +23,8 @@ type edge struct {
 type graph struct {
 	vertices []int
 	mines    []int
+	isMine   map[int]bool
+	mineId   map[int]int
 	sssp     map[int]map[int]int
 	edges    []edge
 	adj      map[int][]int
@@ -120,11 +123,56 @@ func (g *graph) calcMineScore(u, player int, visited map[int]bool, sssp map[int]
 	return
 }
 
-func (g *graph) calcFullScore(player int) (score int64) {
+func (g *graph) dfs(u int, player int, visited map[int]bool) {
+	visited[u] = true
+
+	out, ok := g.adj[u]
+	if !ok {
+		return
+	}
+
+	for _, e := range out {
+		edge := &g.edges[e]
+		if edge.owner != player {
+			continue
+		}
+
+		vis, ok := visited[edge.to]
+		if ok && vis {
+			continue
+		}
+
+		g.dfs(edge.to, player, visited)
+	}
+}
+
+func (g *graph) calcFullScore(player int, futures [][2]int, s game.Settings) (score int64) {
 	for i, mine := range g.mines {
 		visited := make(map[int]bool)
 		score += g.calcMineScore(mine, player, visited, g.sssp[i])
 	}
+
+	if !s.FuturesMode && len(futures) > 0 {
+		log.Println("Warning: futures mode is OFF, but the player thinks it's ON")
+	}
+
+	if s.FuturesMode {
+		for _, f := range futures {
+			a, b := f[0], f[1]
+			if im, ok := g.isMine[a]; !ok || !im {
+				log.Fatal("A future's starting point is not a mine", a, b)
+			}
+			visited := make(map[int]bool)
+			g.dfs(a, player, visited)
+			d := int64(g.sssp[g.mineId[a]][b])
+			if visited[b] {
+				score += d * d * d
+			} else {
+				score -= d * d * d
+			}
+		}
+	}
+
 	return
 }
 
@@ -139,6 +187,13 @@ func makeGraph(m *common.Map) (g graph) {
 	g.mines = m.Mines
 	g.edges = make([]edge, numEdges*2)
 	g.adj = make(map[int][]int)
+
+	g.isMine = make(map[int]bool)
+	g.mineId = make(map[int]int)
+	for i, m := range m.Mines {
+		g.isMine[m] = true
+		g.mineId[m] = i
+	}
 
 	for i, river := range m.Rivers {
 		g.addEdge(2*i, edge{from: river.Source, to: river.Target, owner: -1})
@@ -158,6 +213,7 @@ const MaxPasses = 10
 var flagMap = flag.String("map", "", "Path to a JSON-encoded map")
 var flagBots = flag.String("bots", "baseline,baseline", "Comma-separated list of bots")
 var flagVisFile = flag.String("visfile", "", "filename to write visualizer information to")
+var flagSettings = flag.String("settings", "", "Comma-separated list of settings")
 var visWriter *bufio.Writer
 
 func loadMap(path string) (m common.Map) {
@@ -199,6 +255,24 @@ func parseBots(s string) (bots []string) {
 	return
 }
 
+func parseSettings(str string) (s game.Settings) {
+	if str == "" {
+		return
+	}
+	parts := strings.Split(str, ",")
+	for _, part := range parts {
+		switch part {
+		case "futures":
+			s.FuturesMode = true
+		case "splurges":
+			s.SplurgesMode = true
+		default:
+			log.Fatal("Bad value of settings:", str, ", can't read", part)
+		}
+	}
+	return
+}
+
 func main() {
 	log.SetFlags(0)
 	flag.Parse()
@@ -207,6 +281,9 @@ func main() {
 	numPunters := len(bots)
 
 	m := loadMap(*flagMap)
+
+	settings := parseSettings(*flagSettings)
+	log.Println("Settings:", settings)
 
 	if *flagVisFile != "" {
 		visFile, err := os.Create(*flagVisFile)
@@ -223,9 +300,17 @@ func main() {
 	}
 
 	punters := make([]common.PlayerProxy, numPunters)
+	futures := make([][][2]int, numPunters)
 	for i := range punters {
 		punters[i] = common.MakePlayerProxy(bots[i])
-		punters[i].Setup(i, numPunters, &m)
+		punters[i].Setup(i, numPunters, &m, settings)
+
+		fs := punters[i].GetFutures()
+		futures[i] = make([][2]int, len(fs))
+		for j, f := range fs {
+			futures[i][j][0] = f.Src
+			futures[i][j][1] = f.Dst
+		}
 	}
 
 	g := makeGraph(&m)
@@ -261,6 +346,18 @@ func main() {
 				numPasses[punter] = 0
 				curRivers++
 				g.claimEdge(punter, move.Claim.Source, move.Claim.Target)
+			} else if move.Splurge != nil {
+				if !settings.SplurgesMode || numPasses[punter]+1 < len(move.Splurge.Route) {
+					// Cannot splurge, pass.
+					numPasses[punter]++
+				} else {
+					for i := 0; i+1 < len(move.Splurge.Route); i++ {
+						u := move.Splurge.Route[i]
+						v := move.Splurge.Route[i+1]
+						g.claimEdge(punter, u, v)
+					}
+					numPasses[punter] = 0
+				}
 			}
 
 			if numPasses[punter] == MaxPasses {
@@ -273,7 +370,7 @@ func main() {
 	}
 
 	for punter := 0; punter < numPunters; punter++ {
-		score := g.calcFullScore(punter)
+		score := g.calcFullScore(punter, futures[punter], settings)
 		log.Printf("Punter %v %v, score: %v", punter, punters[punter].Name(), score)
 	}
 

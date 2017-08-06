@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"common"
 	"encoding/json"
+	"game"
 	"io"
 	"log"
 	"os"
@@ -23,8 +24,9 @@ type You struct {
 }
 
 type Ready struct {
-	Ready int                 `json:"ready"`
-	State *common.PlayerProxy `json:"state"`
+	Ready   int                 `json:"ready"`
+	State   *common.PlayerProxy `json:"state"`
+	Futures []game.Future       `json:"futures,omitempty"`
 }
 
 type Score struct {
@@ -38,9 +40,10 @@ type Stop struct {
 }
 
 type Step struct {
-	Punter  *int        `json:"punter"`
-	Punters *int        `json:"punters"`
-	Map     *common.Map `json:"map"`
+	Punter   *int          `json:"punter"`
+	Punters  *int          `json:"punters"`
+	Map      *common.Map   `json:"map"`
+	Settings game.Settings `json:"settings,omitempty"`
 
 	Moves *common.Moves       `json:"move"`
 	Stop  *Stop               `json:"stop"`
@@ -135,13 +138,13 @@ func interact(r *bufio.Reader, w *bufio.Writer) {
 
 	recvMessage(r, &step)
 	if step.Map != nil {
-		pp.Setup(*step.Punter, *step.Punters, step.Map)
+		pp.Setup(*step.Punter, *step.Punters, step.Map, step.Settings)
 		log.Println("Punter id:", *step.Punter)
 		log.Println("Number of punters:", *step.Punters)
 		log.Println("Game map:", *step.Map)
+		log.Println("Settings:", step.Settings)
 
 		sendMessage(w, Ready{Ready: *step.Punter, State: &pp})
-
 		return
 	}
 
