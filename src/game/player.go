@@ -18,6 +18,8 @@ func MakePlayer(name string) Player {
 		return new(Greedy0Player)
 	case "random0":
 		return new(Random0Player)
+	case "random1":
+		return new(Random1Player)
 	case "m":
 		return new(MPlayer)
 	}
