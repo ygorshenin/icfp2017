@@ -6,23 +6,40 @@ type BaselinePlayer struct {
 	Punter  int `json:"punter"`
 	Punters int `json:"punters"`
 
+	Settings Settings `json:"settings"`
+	Futures  []Future `json:"futures"` // futures in the compressed format
+	Passes   int      `json:"passes"`  // number of consecutive passes
+
 	// Non-json fields are recalculated on every move.
 	reachableFromMine [][]bool // reachableFromMine[i] is the reachability array from Mine i
 	score             int64    // current score
 }
 
 func (p *BaselinePlayer) MakeClaimMove(source, target int) Move {
+	p.Passes = 0
 	return MakeClaimMove(p.Punter, source, target)
 }
 
 func (p *BaselinePlayer) MakePassMove() Move {
+	p.Passes++
 	return MakePassMove(p.Punter)
 }
 
-func (p *BaselinePlayer) Setup(punter, punters int, m Map) {
+func (p *BaselinePlayer) MakeSplurgeMove(route []int) Move {
+	if !p.Settings.SplurgesMode {
+		panic("cannot splurge: splurge mode is off")
+	}
+	if len(route) > p.Passes+1 {
+		panic("not enough passes to splurge")
+	}
+	return MakeSplurgeMove(p.Punter, route)
+}
+
+func (p *BaselinePlayer) Setup(punter, punters int, m Map, s Settings) {
 	p.Punter = punter
 	p.Punters = punters
 	p.NumSites = len(m.Sites)
+	p.Settings = s
 
 	p.Mines = m.Mines
 	p.AllEdges = make([]Edge, 2*len(m.Rivers))
@@ -65,6 +82,10 @@ func (p *BaselinePlayer) Name() string {
 
 func (p *BaselinePlayer) GetPunter() int {
 	return p.Punter
+}
+
+func (p *BaselinePlayer) GetFutures() []Future {
+	return p.Futures
 }
 
 func (p *BaselinePlayer) ApplyMoves(moves []Move) {

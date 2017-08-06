@@ -14,6 +14,13 @@ func (pp *PlayerProxy) toGameMove(move *Move) game.Move {
 	if move.Pass != nil {
 		return game.MakePassMove(move.Pass.Punter)
 	}
+	if move.Splurge != nil {
+		route := make([]int, len(move.Splurge.Route))
+		for i, v := range len(move.Splurge.Route) {
+			route[i] = pp.Index.Forward[v]
+		}
+		return game.MakeSplurgeMove(move.Splurge.Punter, route)
+	}
 	claim := move.Claim
 	return game.MakeClaimMove(claim.Punter, pp.Index.Forward[claim.Source], pp.Index.Forward[claim.Target])
 }
@@ -36,6 +43,14 @@ func (pp *PlayerProxy) fromGameMove(m *game.Move) (r Move) {
 			Target: pp.Index.Backward[m.Target]}
 	case game.Pass:
 		r.Pass = &PassMove{Punter: m.Punter}
+	case game.Splurge:
+		route := make([]int, len(m.Route))
+		for i, v := range m.Route {
+			route[i] = pp.Index.Backward[v]
+		}
+		r.Splurge = &SplurgeMove{
+			Punter: m.Punter,
+			Route:  route}
 	default:
 		log.Fatal("Unknown move type:", m.Type)
 	}
@@ -43,7 +58,7 @@ func (pp *PlayerProxy) fromGameMove(m *game.Move) (r Move) {
 	return
 }
 
-func (pp *PlayerProxy) Setup(punter, punters int, m *Map) {
+func (pp *PlayerProxy) Setup(punter, punters int, m *Map, settings game.Settings) {
 	allSites := make([]int, len(m.Sites))
 	for i, site := range m.Sites {
 		allSites[i] = site.Id
@@ -68,7 +83,7 @@ func (pp *PlayerProxy) Setup(punter, punters int, m *Map) {
 		gm.Mines[i] = pp.Index.Forward[mine]
 	}
 
-	pp.Player.Setup(punter, punters, gm)
+	pp.Player.Setup(punter, punters, gm, settings)
 }
 
 func (pp *PlayerProxy) MakeMove(moves []Move) Move {
@@ -82,6 +97,16 @@ func (pp *PlayerProxy) Name() string {
 
 func (pp *PlayerProxy) GetPunter() int {
 	return pp.Player.GetPunter()
+}
+
+func (pp *PlayerProxy) GetFutures() []game.Future {
+	fs := pp.Player.GetFutures()
+	res := make([]game.Future, len(fs))
+	for i, f := range fs {
+		res[i].Src = pp.Index.Backward[f.Src]
+		res[i].Dst = pp.Index.Backward[f.Dst]
+	}
+	return res
 }
 
 func MakePlayerProxy(name string) (pp PlayerProxy) {

@@ -20,10 +20,20 @@ func (m *PassMove) String() string {
 	return fmt.Sprintf("Punter=%v, Pass", m.Punter)
 }
 
+type SplurgeMove struct {
+	Punter int   `json:"punter"`
+	Route  []int `json:"route,omitempty"`
+}
+
+func (m *SplurgeMove) String() string {
+	return fmt.Sprintf("Punter=%v, Splurge Route=%v", m.Route)
+}
+
 type Move struct {
-	Claim *ClaimMove   `json:"claim,omitempty"`
-	Pass  *PassMove    `json:"pass,omitempty"`
-	State *PlayerProxy `json:"state"`
+	Claim   *ClaimMove   `json:"claim,omitempty"`
+	Pass    *PassMove    `json:"pass,omitempty"`
+	Splurge *SplurgeMove `json:"splurge,omitempty"`
+	State   *PlayerProxy `json:"state"`
 }
 
 func (m *Move) String() string {
@@ -32,6 +42,9 @@ func (m *Move) String() string {
 	}
 	if m.Pass != nil {
 		return m.Pass.String()
+	}
+	if m.Splurge != nil {
+		return m.Splurge.String()
 	}
 	return "Bad Move"
 }

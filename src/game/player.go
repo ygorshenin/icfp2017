@@ -1,10 +1,11 @@
 package game
 
 type Player interface {
-	Setup(punter, punters int, m Map)
+	Setup(punter, punters int, m Map, s Settings)
 	MakeMove(moves []Move) Move
 	Name() string
 	GetPunter() int
+	GetFutures() []Future
 }
 
 func MakePlayer(name string) Player {
