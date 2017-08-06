@@ -40,11 +40,12 @@ func (g *graph) addEdge(i int, e edge) {
 
 func (g *graph) claimEdge(owner, from, to int) {
 	out := g.adj[from]
+	found := false
 	for _, e := range out {
 		edge := &g.edges[e]
 		revEdge := &g.edges[e^1]
 		if edge.to == to {
-			if edge.from != from || revEdge.from != to || revEdge.to != from {
+			if found || edge.from != from || revEdge.from != to || revEdge.to != from {
 				panic("Inconsistent state")
 			}
 
@@ -54,7 +55,11 @@ func (g *graph) claimEdge(owner, from, to int) {
 
 			edge.owner = owner
 			revEdge.owner = owner
+			found = true
 		}
+	}
+	if !found {
+		panic("Can't claim unknown edge")
 	}
 }
 
@@ -195,6 +200,7 @@ func parseBots(s string) (bots []string) {
 }
 
 func main() {
+	log.SetFlags(0)
 	flag.Parse()
 
 	bots := parseBots(*flagBots)

@@ -318,7 +318,10 @@ function normaliseEdgeData(edgeData) {
 }
 
 function updateEdgeOwner(punter, source, target) {
-  const es = cy.edges("[source=\"" + source + "\"][target=\"" + target + "\"]");
+  const a = Math.min(source, target)
+  const b = Math.max(source, target)
+
+  const es = cy.edges("[source=\"" + a + "\"][target=\"" + b + "\"]");
   if (es.length > 0) {
     const e = es[0];
     e.data()["owner"] = punter;

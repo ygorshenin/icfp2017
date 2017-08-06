@@ -24,9 +24,9 @@ func (index *CompressedIndex) Setup(values []int) {
 }
 
 type Site struct {
-	Id int     `json:"id"`
-	X  float64 `json:"x,omitempty"`
-	Y  float64 `json:"y,omitempty"`
+	Id int      `json:"id"`
+	X  *float64 `json:"x,omitempty"`
+	Y  *float64 `json:"y,omitempty"`
 }
 
 // The Map structure from server is inconvinient, this is a wrapper.
