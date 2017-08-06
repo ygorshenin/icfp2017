@@ -1,0 +1,77 @@
+This is the writeup for the ICFP Programming Contest 2017 by
+team MIPT Lambda.
+
+
+1. Contest writeup.
+
+* Team, language and environment
+
+  There were two of us this year again. The problem this
+  year looked much less amenable to being solved with functional
+  languages so we chose Go.
+
+  We used one machine running Debian and one running macOS.
+
+* Lightning round
+
+  We ignored the lightning round completely this time:
+  without proper scoreboard and clear rules it just was not worth 
+  the effort.
+  We managed to implement the protocols and to submit a
+  solution that didn't always pass but that's it.
+
+* Playground
+  The key instrument in improving solutions was an offline
+  playground that we wrote. It enabled us to assess our bots by
+  making them play each other. Unfortunately, the analogous
+  online playground was lacking. It was not clear how good our
+  bots are on average (hourly tournaments would help) and it
+  wasn't even clear whether there are more than 10 teams overall.
+  So we used the online mode mostly to debug our understanding
+  of the non-rigorous parts of the problem statement.
+
+* Visualizer
+  Luckily, this time an almost working visualizer was provided
+  (it started to break as soon as the extensions poured in),
+  so we hacked it around a little to read from a text file
+  with the game log and display the game in action.
+  We are not sure whether it was useful but at least it was
+  pleasant to watch.
+
+* Solution overview
+
+  TODO
+
+2. Information about the project.
+
+  The project has the following structure:
+
+    README                 This file.
+
+    install                The installation script, as required by
+                           the problem statement.
+
+    make_submission.sh     A script that packs the git repository
+                           into a file ready for submission.
+
+  + maps/                  The maps provided by the organizers.
+
+    run-all-maps           A helper script to set up several bots
+                           against each other on all the maps and
+                           print the performance statistics.
+
+  + src/
+
+      + common/            Some common files and the proxy that maps
+                           arbitrary site ids to the much more convenient
+                           range of [0..NumSites).
+
+      + game/              Data structures and bots.
+
+      + playground/        Code for the bot arena.
+
+      + punter/            The program implementing the offline mode protocol.
+    
+      + vis                The visualizer. Mostly copied from the λ Punter FX.
+
+    team_id.txt            Our team id.
