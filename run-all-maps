@@ -1,0 +1,21 @@
+#!/bin/bash
+
+case $# in
+    1) BOTS="$1"
+       ;;
+    *) echo "Usage: $0 bots"
+       exit 1
+       ;;
+esac
+
+ROOT=$(dirname "0")
+cd "$ROOT"
+
+set -e
+./install
+for file in maps/*.json
+do
+    echo "Running map $file"
+    ./playground --map $file --bots "$BOTS" 2>&1 | grep 'score:'
+    echo
+done

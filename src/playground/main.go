@@ -371,7 +371,7 @@ func main() {
 
 	for punter := 0; punter < numPunters; punter++ {
 		score := g.calcFullScore(punter, futures[punter], settings)
-		log.Printf("Punter %v %v, score: %v", punter, punters[punter].Name(), score)
+		log.Printf("Punter %v %v, score:\t%10v", punter, punters[punter].Name(), score)
 	}
 
 	if *flagVisFile != "" {
