@@ -10,9 +10,10 @@ type Random1Player struct {
 	distanceFromOwned [][]int
 	totalScore        []int64
 
-	was   []int64
-	depth []int
-	queue []int
+	numFreeEdges int
+	was          []int64
+	depth        []int
+	queue        []int
 }
 
 func (p *Random1Player) MakeMove(moves []Move) Move {
@@ -35,30 +36,35 @@ func (p *Random1Player) MakeMove(moves []Move) Move {
 	p.depth = make([]int, p.NumSites)
 	p.queue = make([]int, p.NumSites)
 
-	scores := make([]int64, len(p.AllEdges))
-	var bestScore int64
-	for i, e := range p.AllEdges {
-		scores[i] = p.getEdgeScore(e)
-		if bestScore < scores[i] {
-			bestScore = scores[i]
+	p.numFreeEdges = 0
+	for _, e := range p.AllEdges {
+		if e.Owner < 0 {
+			p.numFreeEdges++
 		}
-	}
-
-	if bestScore == 0 {
-		return p.MakePassMove()
 	}
 
 	r := rand.New(rand.NewSource(42))
-	visited := 0
-	var move Move
-	for i, score := range scores {
-		if score < bestScore {
+	move := p.MakePassMove()
+	var bestScore int64
+	var visited int
+	for _, e := range p.AllEdges {
+		score := p.getEdgeScore(e)
+		if score == 0 {
 			continue
 		}
-		visited++
-		if r.Intn(visited) == 0 {
-			e := &p.AllEdges[i]
+
+		if bestScore < score {
+			bestScore = score
+			visited = 1
 			move = p.MakeClaimMove(e.Src, e.Dst)
+			continue
+		}
+
+		if score == bestScore {
+			visited++
+			if r.Intn(visited) == 0 {
+				move = p.MakeClaimMove(e.Src, e.Dst)
+			}
 		}
 	}
 
@@ -121,6 +127,7 @@ func (p *Random1Player) calcDegreesOfFreedom(u int) (d int) {
 
 func (p *Random1Player) expectedScore(u, mine, edgeId int) (score float64) {
 	const depthLimit = 20
+	edgesLimit := 10000000 / len(p.Mines) / p.numFreeEdges
 	discount := 0.95
 	mark := int64(len(p.AllEdges))*int64(mine) + int64(edgeId)
 
@@ -131,7 +138,8 @@ func (p *Random1Player) expectedScore(u, mine, edgeId int) (score float64) {
 	p.depth[u] = 0
 	qt++
 
-	for qh < qt {
+	visitedEdges := 0
+	for qh < qt && visitedEdges < edgesLimit {
 		u := p.queue[qh]
 		qh++
 
@@ -140,6 +148,7 @@ func (p *Random1Player) expectedScore(u, mine, edgeId int) (score float64) {
 			continue
 		}
 		for _, e := range p.Edges[u] {
+			visitedEdges++
 			edge := p.AllEdges[e]
 			if edge.Owner < 0 && p.was[edge.Dst] != mark {
 				v := edge.Dst
