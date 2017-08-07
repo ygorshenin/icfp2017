@@ -40,7 +40,23 @@ team MIPT Lambda.
 
 * Solution overview
 
-  TODO
+  In the preprocessing stage, we only store the very basic
+  information about the graph, such as the distances from mines
+  to sites. In the futures mode, we tried to pick a random
+  future for each mine in its Voronoi cell if the cell is
+  sufficiently dense (otherwise, we tried to pick closer
+  sites as futures in order not to lose much).
+
+  We choose based on several heuristics whether to extend the
+  number of liberties in a bfs-like fashion or greedily add
+  the edge that gives the largest profit.
+
+  We did not have time to implement any adversarial strategies
+  such as detecting opponents that are building long paths
+  and blocking their way.
+
+  We do not use neither splurges nor options.
+
 
 2. Information about the project.
 
@@ -75,3 +91,43 @@ team MIPT Lambda.
       + vis                The visualizer. Mostly copied from the λ Punter FX.
 
     team_id.txt            Our team id.
+
+
+3. Example usage.
+
+* Online mode
+
+   To test the punter in the online mode, you will need the Lambda Duct simulator
+   which can be built from the sources at https://github.com/icfpcontest2017/lambda-duct
+
+   Once you have built lambduct, run the ./install script to build the punter binary
+   and then run
+
+   % ./lamduct --client-instance-logfile /dev/stdout --game-port 9240 ./punter
+
+   to join the game at port 9240. The bot type that will be used is hardcoded in src/punter/main.go
+
+* Playground mode
+
+   After running the ./install script, you can run the playground manually
+   by typing, for example,
+
+   % ./playground --map ../../maps/edinburgh-sparse.json \
+      --bots 'random0,baseline' --settings 'futures' --visfile vis.txt
+
+   For the list of options, type
+
+   % ./playground --help
+
+   There is also an option to invoke the playground on all the maps.
+   In the project root directory, type
+
+   % ./run-all-maps 'baseline*16'
+
+   to see the results of the games with 16 simple bots on all maps.
+
+* Visualizer
+
+   Having generated a vis.txt log file in the playground (see above),
+   you may want to visualize the game. Open src/vis/lpfx.htm in
+   your web browser, press the button and choose the game log file.
