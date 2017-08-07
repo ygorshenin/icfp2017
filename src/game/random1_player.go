@@ -120,7 +120,7 @@ func (p *Random1Player) calcDegreesOfFreedom(u int) (d int) {
 }
 
 func (p *Random1Player) expectedScore(u, mine, edgeId int) (score float64) {
-	const depthLimit = 20
+	const depthLimit = 10
 	discount := 0.95
 	mark := int64(len(p.AllEdges))*int64(mine) + int64(edgeId)
 
