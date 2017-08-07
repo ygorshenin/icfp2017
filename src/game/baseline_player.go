@@ -42,7 +42,6 @@ func (p *BaselinePlayer) Setup(punter, punters int, m Map, s Settings) {
 	p.Settings = s
 
 	p.InitGraph(m)
-	p.InitShortestPaths()
 }
 
 func (p *BaselinePlayer) PrepareForMove(moves []Move) {

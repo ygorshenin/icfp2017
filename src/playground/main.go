@@ -164,10 +164,14 @@ func (g *graph) calcFullScore(player int, futures [][2]int, s game.Settings) (sc
 			visited := make(map[int]bool)
 			g.dfs(a, player, visited)
 			d := int64(g.sssp[a][b])
+			d3 := d * d * d
+
 			if visited[b] {
-				score += d * d * d
+				log.Println("Punter ", player, " satisfied future, bonus: ", d3)
+				score += d3
 			} else {
-				score -= d * d * d
+				log.Println("Punter ", player, " failed future, penalty: ", d3)
+				score -= d3
 			}
 		}
 	}
@@ -407,9 +411,9 @@ func main() {
 	for punter, score := range scores {
 		fr := float64(score) * 100 / float64(sub)
 		if score == maxScore {
-			log.Printf("* Punter %v %v, score: %v (%.2v%%)", punter, punters[punter].Name(), score, fr)
+			log.Printf("* Punter %v %v, score: %v (%.2f%%)", punter, punters[punter].Name(), score, fr)
 		} else {
-			log.Printf("  Punter %v %v, score: %v (%.2v%%)", punter, punters[punter].Name(), score, fr)
+			log.Printf("  Punter %v %v, score: %v (%.2f%%)", punter, punters[punter].Name(), score, fr)
 		}
 	}
 
