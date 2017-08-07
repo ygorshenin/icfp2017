@@ -10,7 +10,7 @@ type Random1Player struct {
 	distanceFromOwned [][]int
 	totalScore        []int64
 
-	was   []int
+	was   []int64
 	depth []int
 	queue []int
 }
@@ -31,7 +31,7 @@ func (p *Random1Player) MakeMove(moves []Move) Move {
 		p.distanceFromOwned[i] = p.MSSP(was)
 	}
 
-	p.was = make([]int, p.NumSites)
+	p.was = make([]int64, p.NumSites)
 	p.depth = make([]int, p.NumSites)
 	p.queue = make([]int, p.NumSites)
 
@@ -72,10 +72,6 @@ func (p *Random1Player) getEdgeScore(e Edge) (score int64) {
 		return
 	}
 
-	for i := range p.was {
-		p.was[i] = -1
-	}
-
 	for mine := range p.Mines {
 		rS := p.reachableFromMine[mine][e.Src]
 		rD := p.reachableFromMine[mine][e.Dst]
@@ -87,9 +83,9 @@ func (p *Random1Player) getEdgeScore(e Edge) (score int64) {
 		var d int64
 
 		if rS {
-			d = int64(p.expectedScore(e.Dst, mine))
+			d = int64(p.expectedScore(e.Dst, mine, e.Id))
 		} else {
-			d = int64(p.expectedScore(e.Src, mine))
+			d = int64(p.expectedScore(e.Src, mine, e.Id))
 		}
 
 		score += d * d
@@ -123,13 +119,14 @@ func (p *Random1Player) calcDegreesOfFreedom(u int) (d int) {
 	return
 }
 
-func (p *Random1Player) expectedScore(u, mine int) (score float64) {
+func (p *Random1Player) expectedScore(u, mine, edgeId int) (score float64) {
 	const depthLimit = 20
 	discount := 0.95
+	mark := int64(len(p.AllEdges))*int64(mine) + int64(edgeId)
 
 	qh, qt := 0, 0
 
-	p.was[u] = mine
+	p.was[u] = mark
 	p.queue[qt] = u
 	p.depth[u] = 0
 	qt++
@@ -144,9 +141,9 @@ func (p *Random1Player) expectedScore(u, mine int) (score float64) {
 		}
 		for _, e := range p.Edges[u] {
 			edge := p.AllEdges[e]
-			if edge.Owner < 0 && p.was[edge.Dst] != mine {
+			if edge.Owner < 0 && p.was[edge.Dst] != mark {
 				v := edge.Dst
-				p.was[v] = mine
+				p.was[v] = mark
 				p.queue[qt] = v
 				qt++
 				p.depth[v] = p.depth[u] + 1

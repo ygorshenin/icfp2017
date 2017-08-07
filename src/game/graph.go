@@ -29,9 +29,11 @@ func (g *Graph) InitGraph(m Map) {
 		g.Edges[a] = append(g.Edges[a], 2*i)
 		g.Edges[b] = append(g.Edges[b], 2*i+1)
 	}
+
+	g.initShortestPaths()
 }
 
-func (g *Graph) InitShortestPaths() {
+func (g *Graph) initShortestPaths() {
 	g.Distance = make([][]int, len(g.Mines))
 	for i := range g.Distance {
 		g.Distance[i] = g.SSSP(g.Mines[i])
