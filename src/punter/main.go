@@ -45,9 +45,10 @@ type Step struct {
 	Map      *common.Map   `json:"map"`
 	Settings game.Settings `json:"settings,omitempty"`
 
-	Moves *common.Moves       `json:"move"`
-	Stop  *Stop               `json:"stop"`
-	State *common.PlayerProxy `json:"state"`
+	Moves   *common.Moves       `json:"move"`
+	Stop    *Stop               `json:"stop"`
+	State   *common.PlayerProxy `json:"state"`
+	Timeout *float64            `json:"timeout"`
 }
 
 func sendMessage(w *bufio.Writer, message interface{}) {
@@ -130,7 +131,7 @@ func handshake(r *bufio.Reader, w *bufio.Writer, n string) {
 }
 
 func interact(r *bufio.Reader, w *bufio.Writer) {
-	pp := common.MakePlayerProxy("baseline")
+	pp := common.MakePlayerProxy("random1")
 	handshake(r, w, pp.Name())
 
 	var step Step
@@ -162,7 +163,12 @@ func interact(r *bufio.Reader, w *bufio.Writer) {
 		return
 	}
 
-	log.Fatal("Unknown state")
+	if step.Timeout != nil {
+		log.Println("Timeout: ", *step.Timeout)
+		return
+	}
+
+	log.Println("Unknown state")
 }
 
 func main() {
