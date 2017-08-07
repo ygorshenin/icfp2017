@@ -21,6 +21,7 @@ team MIPT Lambda.
   solution that didn't always pass but that's it.
 
 * Playground
+
   The key instrument in improving solutions was an offline
   playground that we wrote. It enabled us to assess our bots by
   making them play each other. Unfortunately, the analogous
@@ -31,6 +32,7 @@ team MIPT Lambda.
   of the non-rigorous parts of the problem statement.
 
 * Visualizer
+
   Luckily, this time an almost working visualizer was provided
   (it started to break as soon as the extensions poured in),
   so we hacked it around a little to read from a text file
